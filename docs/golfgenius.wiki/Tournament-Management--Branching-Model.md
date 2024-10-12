@@ -1,0 +1,1 @@
+Wiki explaining the **Tournament Management Branching Model** can be found at the following link: [[WIKI][Raul G.] Develop Branches Model](https://docs.google.com/document/d/1-zIvHRCg-H18r8G4AYxV8rdRGtL4UTmlWCWKckIUHJ4/edit#)

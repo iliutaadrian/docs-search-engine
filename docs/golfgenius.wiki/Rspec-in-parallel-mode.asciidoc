@@ -1,0 +1,34 @@
+1. add in .envrc file
+
+    export TEST_ENV_NUMBER=4
+    export PARALLEL_TEST_PROCESSORS=4
+    export PARALLEL_TEST_GROUPS=4
+    export PARALLEL_PID_FILE=""
+
+    After modifying the .envrc file, run
+    
+    direnv allow
+
+2.  add in database.yml for development:
+
+    schema_search_path: 'c103, public'
+
+3. If there are migrations for databases:
+
+    rake db:migrate
+    ruby script/change_structure.rb
+
+4.  Preparation of test databases
+
+    ruby script/clean_db.rb -1
+    ruby script/clean_db.rb 1
+
+**All programs can be found in feature/test_jenkins.**
+
+5.  Test in parallel mode:
+    
+    for a specific file
+    RAILS_ENV=test parallel_test -e "rake spec SPEC=spec/controllers/concerns/membership_program_concern_spec.rb"
+
+    For the entire test suite
+    RAILS_ENV=test rake parallel:spec

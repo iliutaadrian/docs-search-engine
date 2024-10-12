@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <header class="bg-white shadow">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <h1 class="text-3xl font-bold text-gray-900">Document Search</h1>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div class="px-4 py-6 sm:px-0">
+            <form id="searchForm" class="mb-6 relative w-full">
+                <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Search documentation"
+                    class="w-full py-3 px-4 pr-12 text-lg bg-white border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
+                >
+                <button 
+                    type="submit" 
+                    class="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                >
+                    Search
+                </button>
+            </form>
+            <div id="results" class="space-y-4"></div>
+        </div>
+    </main>
+
+    <script>
+    {% raw %}
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const query = document.getElementById('searchInput').value;
+            if (query.trim()) {
+                performSearch(query);
+            }
+        });
+
+        function performSearch(query) {
+            const resultsContainer = document.getElementById('results');
+            resultsContainer.innerHTML = '<p class="text-center text-gray-600">Searching...</p>';
+
+            fetch(`/search?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    resultsContainer.innerHTML = '';
+                    if (data.length === 0) {
+                        resultsContainer.innerHTML = '<p class="text-center text-gray-600">No results found.</p>';
+                    } else {
+                        const resultsHtml = data.map(result => `
+                            <div class="bg-white p-4 rounded-lg shadow ${result.occurrences > 1 ? 'border-2 border-yellow-500' : ''}">
+                                <h3 class="text-lg font-semibold text-gray-900">${result.name}</h3>
+                                <p class="text-sm text-gray-500 mt-1">Path: ${result.path}</p>
+                                ${result.occurrences > 1 ? `<p class="text-sm font-bold text-yellow-600 mt-1">Warning: ${result.occurrences} occurrences found</p>` : ''}
+                                <div class="mt-2 space-y-2">
+                                    ${result.details.map((detail, index) => `
+                                        <div class="border-t pt-2">
+                                            <p class="text-sm text-gray-600">Occurrence ${index + 1}:</p>
+                                            <p class="text-gray-800 mt-1">${detail.content_snippet}</p>
+                                            <p class="text-xs text-gray-500 mt-1">Content length: ${detail.content_length}</p>
+                                            <details class="mt-1">
+                                                <summary class="text-xs text-blue-500 cursor-pointer">Show content preview</summary>
+                                                <pre class="text-xs text-gray-700 mt-1 whitespace-pre-wrap">${detail.content_preview}</pre>
+                                            </details>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('');
+                        resultsContainer.innerHTML = `
+                            <h2 class="text-xl font-bold text-gray-900 mb-4">Search Results:</h2>
+                            ${resultsHtml}
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                    resultsContainer.innerHTML = '<p class="text-red-500">Failed to perform search. Please try again.</p>';
+                });
+        }
+    {% endraw %}
+    </script>
+</body>
+</html>
