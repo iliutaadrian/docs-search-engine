@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify, render_template
-from full_text_search import init_fulltext_db, index_documents, fulltext_search
+from document_processor import init_processor
+from fulltext_search import search_fulltext
+from vector_search import init_vector_search, search_vector
 from config import DOCS_FOLDER
 
 app = Flask(__name__)
@@ -13,21 +15,31 @@ def search():
         return jsonify({"error": "No query provided"}), 400
     
     if mode == 'fulltext':
-        results = fulltext_search(query)
-        return jsonify(results)
-    elif mode in ['semantic', 'vector', 'hybrid']:
-        return jsonify({"error": f"{mode.capitalize()} search not implemented"}), 501
+        results = search_fulltext(query)
+    elif mode == 'vector':
+        results = search_vector(query)
+    elif mode == 'hybrid':
+        fulltext_results = search_fulltext(query)
+        vector_results = search_vector(query)
+        results = combine_results(fulltext_results, vector_results)
     else:
         return jsonify({"error": "Invalid search mode"}), 400
+    
+    return jsonify(results)
+
+def combine_results(fulltext_results, vector_results):
+    combined = fulltext_results + vector_results
+    combined.sort(key=lambda x: x.get('occurrence_count', 0) + x.get('similarity_score', 0), reverse=True)
+    return combined[:10] 
+
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
 if __name__ == '__main__':
-    # full text search
-    init_fulltext_db()
-    index_documents(DOCS_FOLDER)
+    documents = init_processor()
 
+    init_vector_search(documents)
 
     app.run(debug=True, host='0.0.0.0')

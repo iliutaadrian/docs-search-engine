@@ -1,3 +1,5 @@
-flask 
-markdown 
+Flask
+markdown
 PyPDF2
+scikit-learn
+numpy

@@ -1,0 +1,21 @@
+graph TD
+    A[Document Folder] -->|Contains| B[Markdown Files]
+    A -->|Contains| C[PDF Files]
+    A -->|Contains| D[Text Files]
+    
+    B --> E{Already in Database?}
+    C --> E
+    D --> E
+    
+    E -->|No| F[Extract Content]
+    E -->|Yes| G[Skip]
+    
+    F --> H[Index in SQLite Database]
+    H --> I[Store Path and Content]
+    
+    J[User Query] --> K{Search Type}
+    K -->|Full-text Search| L[Perform Full-text Search]
+    K -->|Other Search Types| M[Perform Other Searches]
+    
+    L --> N[Return Results]
+    M --> N
