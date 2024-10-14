@@ -5,29 +5,69 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document Search</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .highlight {
+            background-color: #FF6900;
+            color: #1F2937;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+    </style>
 </head>
-<body class="bg-gray-100">
-    <header class="bg-white shadow">
+<body class="bg-gray-900 text-gray-100">
+    <header class="bg-gray-800 shadow">
         <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-            <h1 class="text-3xl font-bold text-gray-900">Document Search</h1>
+            <h1 class="text-3xl font-bold text-gray-100">Document Search</h1>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div class="px-4 py-6 sm:px-0">
-            <form id="searchForm" class="mb-6 relative w-full">
-                <input
-                    type="text"
-                    id="searchInput"
-                    placeholder="Search documentation"
-                    class="w-full py-3 px-4 pr-12 text-lg bg-white border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
-                >
-                <button 
-                    type="submit" 
-                    class="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-                >
-                    Search
-                </button>
+            <form id="searchForm" class="mb-6 w-full">
+                <div class="relative mb-4">
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Search documentation"
+                        class="w-full py-3 px-4 pr-12 text-lg bg-gray-700 border border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-100 placeholder-gray-400"
+                    >
+                    <button 
+                        type="submit" 
+                        class="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                    >
+                        Search
+                    </button>
+                </div>
+                <div class="space-y-2">
+                    <label class="flex items-start">
+                        <input type="radio" name="searchMode" value="fulltext" checked class="form-radio text-blue-500 mt-1">
+                        <span class="ml-2">
+                            <span class="font-medium">Full-text</span><br>
+                            <span class="text-sm text-gray-400">Uses SQLite for exact matches and simple queries</span>
+                        </span>
+                    </label>
+                    <label class="flex items-start">
+                        <input type="radio" name="searchMode" value="semantic" class="form-radio text-blue-500 mt-1">
+                        <span class="ml-2">
+                            <span class="font-medium">Semantic</span><br>
+                            <span class="text-sm text-gray-400">Understands query meaning for broader matches</span>
+                        </span>
+                    </label>
+                    <label class="flex items-start">
+                        <input type="radio" name="searchMode" value="vector" class="form-radio text-blue-500 mt-1">
+                        <span class="ml-2">
+                            <span class="font-medium">Vector</span><br>
+                            <span class="text-sm text-gray-400">Finds similar documents based on content</span>
+                        </span>
+                    </label>
+                    <label class="flex items-start">
+                        <input type="radio" name="searchMode" value="hybrid" class="form-radio text-blue-500 mt-1">
+                        <span class="ml-2">
+                            <span class="font-medium">Hybrid</span><br>
+                            <span class="text-sm text-gray-400">Combines multiple search techniques for balanced results</span>
+                        </span>
+                    </label>
+                </div>
             </form>
             <div id="results" class="space-y-4"></div>
         </div>
@@ -38,52 +78,70 @@
         document.getElementById('searchForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const query = document.getElementById('searchInput').value;
+            const mode = document.querySelector('input[name="searchMode"]:checked').value;
             if (query.trim()) {
-                performSearch(query);
+                performSearch(query, mode);
             }
         });
 
-        function performSearch(query) {
+        function performSearch(query, mode) {
             const resultsContainer = document.getElementById('results');
-            resultsContainer.innerHTML = '<p class="text-center text-gray-600">Searching...</p>';
+            resultsContainer.innerHTML = '<p class="text-center text-gray-400">Searching...</p>';
 
-            fetch(`/search?q=${encodeURIComponent(query)}`)
+            fetch(`/search?q=${encodeURIComponent(query)}&mode=${encodeURIComponent(mode)}`)
                 .then(response => response.json())
                 .then(data => {
                     resultsContainer.innerHTML = '';
                     if (data.length === 0) {
-                        resultsContainer.innerHTML = '<p class="text-center text-gray-600">No results found.</p>';
+                        resultsContainer.innerHTML = '<p class="text-center text-gray-400">No results found.</p>';
                     } else {
-                        const resultsHtml = data.map(result => `
-                            <div class="bg-white p-4 rounded-lg shadow ${result.occurrences > 1 ? 'border-2 border-yellow-500' : ''}">
-                                <h3 class="text-lg font-semibold text-gray-900">${result.name}</h3>
-                                <p class="text-sm text-gray-500 mt-1">Path: ${result.path}</p>
-                                ${result.occurrences > 1 ? `<p class="text-sm font-bold text-yellow-600 mt-1">Warning: ${result.occurrences} occurrences found</p>` : ''}
+                        const resultsHtml = data.map((result, index) => `
+                            <div class="bg-gray-800 p-4 rounded-lg shadow">
+                                <h3 class="text-lg font-semibold text-gray-100">${highlightMatches(result.name, query)}</h3>
+                                <p class="text-sm text-gray-400 mt-1">Path: ${result.path}</p>
+                                <p class="text-sm text-blue-400 mt-1">Occurrences: ${result.occurrence_count}</p>
                                 <div class="mt-2 space-y-2">
-                                    ${result.details.map((detail, index) => `
-                                        <div class="border-t pt-2">
-                                            <p class="text-sm text-gray-600">Occurrence ${index + 1}:</p>
-                                            <p class="text-gray-800 mt-1">${detail.content_snippet}</p>
-                                            <p class="text-xs text-gray-500 mt-1">Content length: ${detail.content_length}</p>
-                                            <details class="mt-1">
-                                                <summary class="text-xs text-blue-500 cursor-pointer">Show content preview</summary>
-                                                <pre class="text-xs text-gray-700 mt-1 whitespace-pre-wrap">${detail.content_preview}</pre>
-                                            </details>
+                                    <div class="border-t border-gray-700 pt-2">
+                                        <pre class="text-xs text-gray-200 mt-1 whitespace-pre-wrap">${highlightMatches(result.content_snippet, query)}</pre>
+                                        <p class="text-xs text-gray-400 mt-1">Content length: ${result.content_length}</p>
+                                        <button onclick="toggleFullContent(${index})" class="text-xs text-blue-400 cursor-pointer mt-2">
+                                            Show full content
+                                        </button>
+                                        <div id="fullContent${index}" class="hidden mt-2">
+                                            <pre class="text-xs text-gray-300 whitespace-pre-wrap">${result.highlighted_content}</pre>
                                         </div>
-                                    `).join('')}
+                                    </div>
                                 </div>
                             </div>
                         `).join('');
                         resultsContainer.innerHTML = `
-                            <h2 class="text-xl font-bold text-gray-900 mb-4">Search Results:</h2>
+                            <h2 class="text-xl font-bold text-gray-100 mb-4">Search Results (${mode} mode):</h2>
                             ${resultsHtml}
                         `;
                     }
                 })
                 .catch(error => {
                     console.error('Search error:', error);
-                    resultsContainer.innerHTML = '<p class="text-red-500">Failed to perform search. Please try again.</p>';
+                    resultsContainer.innerHTML = '<p class="text-red-400">Failed to perform search. Please try again.</p>';
                 });
+        }
+
+        function highlightMatches(text, query) {
+            const words = query.split(/\s+/).map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+            const regex = new RegExp(`(${words.join('|')})`, 'gi');
+            return text.replace(regex, '<span class="highlight">$1</span>');
+        }
+
+        function toggleFullContent(index) {
+            const fullContentDiv = document.getElementById(`fullContent${index}`);
+            const button = fullContentDiv.previousElementSibling;
+            if (fullContentDiv.classList.contains('hidden')) {
+                fullContentDiv.classList.remove('hidden');
+                button.textContent = 'Hide full content';
+            } else {
+                fullContentDiv.classList.add('hidden');
+                button.textContent = 'Show full content';
+            }
         }
     {% endraw %}
     </script>
