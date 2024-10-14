@@ -1,5 +1,0 @@
-There are various reasons for which we might not want to solve a ticket through the Bugs Stream. Tickets with an `x/` label are either rejected or moved to the bottom of the priority list.
-
-|Backlog|Duplicate|Not repro|Not a bug|
-|---|---|---|---|
-|Tickets that should be handled through the backlog. This includes issues that require intrusive changes or need to be researched and discussed.|Duplicates are common when there is a high amount of new tickets. They can be closed directly if there is already an answer to the original issue.|Some tickets might prove hard to reproduce. In such scenarios, it is not worth spending a lot of time but rather requesting more details in case a similar issue pops up in the future.|Requests that are not the consequence of unspecified behavior should be addressed with the lowest priority.|
