@@ -51,10 +51,10 @@ def index():
 if __name__ == '__main__':
     documents = init_processor()
 
-    # init_fulltext(documents)
-    # init_tfidf(documents)
-    # init_openai(documents)
+    init_fulltext(documents)
+    init_tfidf(documents)
+    init_openai(documents)
     init_bert(documents)
-    # init_sentence_transformers(documents)
+    init_sentence_transformers(documents)
     
     app.run(debug=True, host='0.0.0.0')

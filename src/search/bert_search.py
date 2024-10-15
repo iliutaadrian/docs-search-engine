@@ -1,94 +1,96 @@
 import os
-from langchain_community.vectorstores import FAISS
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_core.documents import Document
-from config.config import DATA_FOLDER
-from transformers import BertTokenizer, BertModel
-import torch
 import numpy as np
+from sentence_transformers import SentenceTransformer
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from config.config import DATA_FOLDER
 
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-model = BertModel.from_pretrained('bert-base-uncased')
-model.eval()
+# Initialize the BERT model
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
-documents = None
-vector_store = None
-FAISS_INDEX_PATH = os.path.join(DATA_FOLDER, "faiss_bert_index")
-
-def embed_text(text):
-    inputs = tokenizer(text, return_tensors='pt', max_length=512, truncation=True, padding=True)
-    with torch.no_grad():
-        outputs = model(**inputs)
-    return outputs.last_hidden_state.mean(dim=1).squeeze().numpy()
+# Global variables
+embeddings = []
+documents = []
+INDEX_PATH = os.path.join(DATA_FOLDER, "bert_index.npz")
 
 def init(docs):
-    global documents, vector_store
-    documents = docs
+    global embeddings, documents
     
-    if os.path.exists(FAISS_INDEX_PATH):
-        print("Loading existing FAISS index...")
+    if os.path.exists(INDEX_PATH):
+        print("Loading existing BERT embeddings index...")
         try:
-            vector_store = FAISS.load_local(FAISS_INDEX_PATH, embed_text, allow_dangerous_deserialization=True)
-            print(f"Loaded vector store with {vector_store.index.ntotal} vectors.")
+            data = np.load(INDEX_PATH, allow_pickle=True)
+            embeddings = data['embeddings'].tolist()
+            documents = data['documents'].tolist()
+            print("Successfully loaded index with {} BERT embedding vectors.".format(len(embeddings)))
         except Exception as e:
-            print(f"Error loading existing index: {e}")
-            print("Creating new FAISS index...")
-            vector_store = create_new_index(documents)
+            print("Error loading existing BERT embeddings index: {}".format(e))
+            print("Creating new BERT embeddings index...")
+            create_new_index(docs)
     else:
-        print("Creating new FAISS index...")
-        vector_store = create_new_index(documents)
+        print("Creating new BERT embeddings index...")
+        create_new_index(docs)
 
 def create_new_index(docs):
-    langchain_docs = [
-        Document(page_content=doc['content'], metadata={"path": doc['path']})
-        for doc in docs
-    ]
+    global embeddings, documents
     
+    print("Processing documents for BERT embeddings...")
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=200,
         length_function=len,
     )
-    split_docs = text_splitter.split_documents(langchain_docs)
     
-    # Create embeddings
-    texts = [doc.page_content for doc in split_docs]
-    embeddings = [embed_text(text) for text in texts]
+    all_splits = []
+    all_metadatas = []
+    for doc in docs:
+        splits = text_splitter.split_text(doc['content'])
+        all_splits.extend(splits)
+        all_metadatas.extend([{"path": doc['path']}] * len(splits))
     
-    # Create vector store
-    vs = FAISS.from_embeddings(embeddings, texts, embed_text)
+    print("Generating BERT embeddings for {} document chunks...".format(len(all_splits)))
+    embeddings = model.encode(all_splits)
+    documents = [{"content": split, "metadata": metadata} for split, metadata in zip(all_splits, all_metadatas)]
     
-    # Save the index
-    vs.save_local(FAISS_INDEX_PATH)
+    print("Saving BERT embeddings index...")
+    np.savez(INDEX_PATH, embeddings=embeddings, documents=documents)
     
-    print(f"Vector search initialized with {len(split_docs)} chunks from {len(docs)} documents using BERT model.")
-    return vs
+    print("BERT embeddings vector search initialized with {} chunks from {} documents using all-MiniLM-L6-v2 model.".format(len(all_splits), len(docs)))
 
 def search(query, k=5):
-    if vector_store is None:
-        raise ValueError("Vector store not initialized. Call init() first.")
+    global embeddings, documents
     
-    results = vector_store.similarity_search_with_score(query, k=k)
+    if not embeddings or not documents:
+        raise ValueError("BERT embeddings vector store not initialized. Call init() first.")
+    
+    query_embedding = model.encode([query])[0]
+    
+    similarities = np.dot(embeddings, query_embedding) / (
+        np.linalg.norm(embeddings, axis=1) * np.linalg.norm(query_embedding)
+    )
+    top_k_indices = np.argsort(similarities)[-k:][::-1]
+    
+    results = [(documents[i], similarities[i]) for i in top_k_indices]
     
     processed_results = []
     for doc, score in results:
-        full_content = doc.page_content
+        full_content = doc['content']
         content_length = len(full_content)
         content_snippet = full_content[:100] + "..." if len(full_content) > 100 else full_content
         highlighted_content = full_content
         for term in query.split():
-            highlighted_content = highlighted_content.replace(term, f"<b>{term}</b>")
+            highlighted_content = highlighted_content.replace(term, "<b>{}</b>".format(term))
         occurrence_count = sum(full_content.lower().count(term.lower()) for term in query.split())
         
         processed_results.append({
-            "path": doc.metadata["path"],
-            "name": os.path.basename(doc.metadata["path"]),
+            "path": doc['metadata']["path"],
+            "name": os.path.basename(doc['metadata']["path"]),
             "content_snippet": content_snippet,
             "content_length": content_length,
             "full_content": full_content,
             "highlighted_content": highlighted_content,
             "occurrence_count": occurrence_count,
-            "similarity_score": 1 - score  # FAISS returns distance, so we convert it to similarity
+            "similarity_score": score
         })
     
+    print("Returned {} processed results from BERT embeddings search.".format(len(processed_results)))
     return processed_results
