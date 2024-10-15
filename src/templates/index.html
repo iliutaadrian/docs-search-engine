@@ -35,66 +35,145 @@
             Search
           </button>
         </div>
-        <div class="space-y-2">
-          <label class="flex items-start">
-            <input type="radio" name="searchMode" value="fulltext" checked class="form-radio text-blue-500 mt-1">
-            <span class="ml-2">
-              <span class="font-medium">Full-text</span><br>
-              <span class="text-sm text-gray-400">Uses SQLite FTS5 for exact matches and simple queries</span>
-            </span>
-          </label>
-          <label class="flex items-start">
-            <input type="radio" name="searchMode" value="tfidf" class="form-radio text-blue-500 mt-1">
-            <span class="ml-2">
-              <span class="font-medium">TF-IDF Vector</span><br>
-              <span class="text-sm text-gray-400">Uses TF-IDF to find similar documents based on term importance</span>
-            </span>
-          </label>
-          <label class="flex items-start">
-            <input type="radio" name="searchMode" value="openai" class="form-radio text-blue-500 mt-1">
-            <span class="ml-2">
-              <span class="font-medium">OpenAI Embeddings</span><br>
-              <span class="text-sm text-gray-400">Leverages OpenAI's embeddings model for state-of-the-art semantic
-                search</span>
-            </span>
-          </label>
-          <label class="flex items-start">
-            <input type="radio" name="searchMode" value="bert" class="form-radio text-blue-500 mt-1">
-            <span class="ml-2">
-              <span class="font-medium">BERT Embeddings</span><br>
-              <span class="text-sm text-gray-400">Uses BERT embeddings for fast semantic similarity
-                search</span>
-            </span>
-          </label>
-          <label class="flex items-start">
-            <input type="radio" name="searchMode" value="sentence_transformers" class="form-radio text-blue-500 mt-1">
-            <span class="ml-2">
-              <span class="font-medium">Sentence Transformers</span><br>
-              <span class="text-sm text-gray-400">Uses Sentence Transformers for advanced semantic search</span>
-            </span>
-          </label>
-          <label class="flex items-start">
-            <input type="radio" name="searchMode" value="hybrid" class="form-radio text-blue-500 mt-1">
-            <span class="ml-2">
-              <span class="font-medium">Hybrid</span><br>
-              <span class="text-sm text-gray-400">Combines full-text and Ada embeddings for balanced results</span>
-            </span>
-          </label>
-          <label class="flex items-start">
-            <input type="radio" name="searchMode" value="ai" class="form-radio text-blue-500 mt-1">
-            <span class="ml-2">
-              <span class="font-medium">AI Response</span><br>
-              <span class="text-sm text-gray-400">Generates an AI response based on the search results</span>
-            </span>
-          </label>
+        <div class="space-y-4">
+          <h2 class="text-lg font-semibold">Search Methods</h2>
+
+          <!-- Syntactic Search Methods -->
+          <div>
+            <h3 class="text-md font-medium mb-2">Syntactic Search Methods</h3>
+            <div class="space-y-2 ml-4">
+              <label class="flex items-center">
+                <input type="radio" name="searchMode" value="fulltext" checked class="form-radio text-blue-500">
+                <span class="ml-2 flex items-center">
+                  <span class="font-medium mr-2">Full-Text Search (FTS)</span>
+                  <span class="text-sm text-gray-400 mr-2">Quick word-based search using an index. Good for exact
+                    matches.</span>
+                  <a href="https://en.wikipedia.org/wiki/Full-text_search" target="_blank" rel="noopener noreferrer"
+                    class="text-xs text-blue-500 hover:underline">Learn more</a>
+                </span>
+              </label>
+              <label class="flex items-center">
+                <input type="radio" name="searchMode" value="bm25" class="form-radio text-blue-500">
+                <span class="ml-2 flex items-center">
+                  <span class="font-medium mr-2">BM25</span>
+                  <span class="text-sm text-gray-400 mr-2">Ranks documents by relevance to a search query.</span>
+                  <a href="https://en.wikipedia.org/wiki/Okapi_BM25" target="_blank" rel="noopener noreferrer"
+                    class="text-xs text-blue-500 hover:underline">Learn more</a>
+                </span>
+              </label>
+              <label class="flex items-center">
+                <input type="radio" name="searchMode" value="tfidf" class="form-radio text-blue-500">
+                <span class="ml-2 flex items-center">
+                  <span class="font-medium mr-2">TF-IDF</span>
+                  <span class="text-sm text-gray-400 mr-2">Finds important words in documents for similarity
+                    matching.</span>
+                  <a href="https://en.wikipedia.org/wiki/Tf%E2%80%93idf" target="_blank" rel="noopener noreferrer"
+                    class="text-xs text-blue-500 hover:underline">Learn more</a>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Semantic Search Methods -->
+          <div>
+            <h3 class="text-md font-medium mb-2">Semantic Search Methods</h3>
+            <div class="space-y-2 ml-4">
+              <label class="flex items-center">
+                <input type="radio" name="searchMode" value="openai" class="form-radio text-blue-500">
+                <span class="ml-2 flex items-center">
+                  <span class="font-medium mr-2">OpenAI Embeddings</span>
+                  <span class="text-sm text-gray-400 mr-2">Uses AI to understand context and meaning in searches.</span>
+                  <a href="https://en.wikipedia.org/wiki/Word_embedding" target="_blank" rel="noopener noreferrer"
+                    class="text-xs text-blue-500 hover:underline">Learn more</a>
+                </span>
+              </label>
+              <label class="flex items-center">
+                <input type="radio" name="searchMode" value="bert" class="form-radio text-blue-500">
+                <span class="ml-2 flex items-center">
+                  <span class="font-medium mr-2">BERT Embeddings</span>
+                  <span class="text-sm text-gray-400 mr-2">Captures context-dependent meanings in text.</span>
+                  <a href="https://en.wikipedia.org/wiki/BERT_(language_model)" target="_blank"
+                    rel="noopener noreferrer" class="text-xs text-blue-500 hover:underline">Learn more</a>
+                </span>
+              </label>
+              <label class="flex items-center">
+                <input type="radio" name="searchMode" value="sentence_transformers" class="form-radio text-blue-500">
+                <span class="ml-2 flex items-center">
+                  <span class="font-medium mr-2">Sentence Transformers</span>
+                  <span class="text-sm text-gray-400 mr-2">Compares semantic similarity between sentences.</span>
+                  <a href="https://en.wikipedia.org/wiki/Sentence_embedding" target="_blank" rel="noopener noreferrer"
+                    class="text-xs text-blue-500 hover:underline">Learn more</a>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Hybrid and Advanced Methods -->
+          <div>
+            <h3 class="text-md font-medium mb-2">Hybrid and Advanced Methods</h3>
+            <div class="space-y-2 ml-4">
+              <label class="flex items-center">
+                <input type="radio" name="searchMode" value="hybrid" class="form-radio text-blue-500">
+                <span class="ml-2 flex items-center">
+                  <span class="font-medium mr-2">Hybrid Search</span>
+                  <span class="text-sm text-gray-400 mr-2">Combines word-based and meaning-based search methods.</span>
+                  <a href="https://en.wikipedia.org/wiki/Enterprise_search" target="_blank" rel="noopener noreferrer"
+                    class="text-xs text-blue-500 hover:underline">Learn more</a>
+                </span>
+              </label>
+              <label class="flex items-center">
+                <input type="radio" name="searchMode" value="rrf" class="form-radio text-blue-500">
+                <span class="ml-2 flex items-center">
+                  <span class="font-medium mr-2">Reciprocal Rank Fusion</span>
+                  <span class="text-sm text-gray-400 mr-2">Merges results from multiple search methods.</span>
+                  <a href="https://en.wikipedia.org/wiki/Rank_aggregation" target="_blank" rel="noopener noreferrer"
+                    class="text-xs text-blue-500 hover:underline">Learn more</a>
+                </span>
+              </label>
+              <label class="flex items-center">
+                <input type="radio" name="searchMode" value="ai" class="form-radio text-blue-500">
+                <span class="ml-2 flex items-center">
+                  <span class="font-medium mr-2">AI-Assisted Search</span>
+                  <span class="text-sm text-gray-400 mr-2">Uses AI to analyze and summarize search results.</span>
+                  <a href="https://en.wikipedia.org/wiki/Artificial_intelligence_in_computer-aided_technologies"
+                    target="_blank" rel="noopener noreferrer" class="text-xs text-blue-500 hover:underline">Learn
+                    more</a>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Ranking and Personalization Methods -->
+          <div>
+            <h3 class="text-md font-medium mb-2">Ranking and Personalization Methods</h3>
+            <div class="space-y-2 ml-4">
+              <label class="flex items-center">
+                <input type="radio" name="searchMode" value="page_rank" class="form-radio text-blue-500">
+                <span class="ml-2 flex items-center">
+                  <span class="font-medium mr-2">Page Ranking</span>
+                  <span class="text-sm text-gray-400 mr-2">Ranks results based on popularity and user behavior.</span>
+                  <a href="https://en.wikipedia.org/wiki/PageRank" target="_blank" rel="noopener noreferrer"
+                    class="text-xs text-blue-500 hover:underline">Learn more</a>
+                </span>
+              </label>
+            </div>
+          </div>
         </div>
-      </form>
+    </div>
+    </div>
+    </div>
+    </div>
+    </div>
+    </form>
     </div>
     <div id="aiResponse" class="mb-6 hidden">
       <h2 class="text-xl font-bold text-gray-100 mb-4">AI Response:</h2>
       <div class="bg-gray-800 p-4 rounded-lg shadow">
-        <p id="aiResponseContent" class="text-gray-200"></p>
+        <pre id="aiResponseContent"
+          class="text-gray-200 whitespace-pre-wrap break-words font-mono text-sm leading-relaxed max-h-96 overflow-y-auto">
+        </pre>
       </div>
+    </div>
     </div>
     <div id="results" class="space-y-4"></div>
   </main>
