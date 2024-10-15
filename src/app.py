@@ -8,6 +8,8 @@ from search.openai_search import init as init_openai, search as search_openai
 from search.bert_search import init as init_bert, search as search_bert
 from search.sentence_transformers_search import init as init_sentence_transformers, search as search_sentence_transformers
 
+from llm import init_llm, generate_ai_response
+
 from config.config import DOCS_FOLDER
 
 app = Flask(__name__)
@@ -32,8 +34,15 @@ def search():
         results = search_sentence_transformers(query)
     elif mode == 'hybrid':
         fulltext_results = search_fulltext(query)
-        vector_results = search_openai(query)  # You can change this to any other vector search method
+        vector_results = search_openai(query)  
         results = combine_results(fulltext_results, vector_results)
+    elif mode == 'ai':
+        search_results = search_openai(query)
+        ai_response = generate_ai_response(query, search_results)
+        results = {
+            "ai_response": ai_response.get('full_content', 'No response possible'),
+            "search_results": search_results[:3]
+        }
     else:
         return jsonify({"error": "Invalid search mode"}), 400
     
@@ -56,5 +65,6 @@ if __name__ == '__main__':
     init_openai(documents)
     init_bert(documents)
     init_sentence_transformers(documents)
+    init_llm()
     
     app.run(debug=True, host='0.0.0.0')
