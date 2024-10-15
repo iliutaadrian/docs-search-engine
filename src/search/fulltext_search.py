@@ -1,11 +1,14 @@
 import os
 import sqlite3
-from typing import List, Dict
-from config import DB_PATH
+from config.config import DB_PATH
 
-def search_fulltext(query: str) -> List[Dict]:
+def init(documents):
+    pass
+
+def search(query):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
+    
     terms = query.split()
     fts_query = ' AND '.join(terms)
     

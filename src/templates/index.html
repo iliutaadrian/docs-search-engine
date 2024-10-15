@@ -44,29 +44,47 @@
             </span>
           </label>
           <label class="flex items-start">
-            <input type="radio" name="searchMode" value="semantic" class="form-radio text-blue-500 mt-1">
+            <input type="radio" name="searchMode" value="tfidf" class="form-radio text-blue-500 mt-1">
             <span class="ml-2">
-              <span class="font-medium">Semantic</span><br>
-              <span class="text-sm text-gray-400">Understands query meaning for broader matches</span>
+              <span class="font-medium">TF-IDF Vector</span><br>
+              <span class="text-sm text-gray-400">Uses TF-IDF to find similar documents based on term importance</span>
             </span>
           </label>
           <label class="flex items-start">
-            <input type="radio" name="searchMode" value="vector" class="form-radio text-blue-500 mt-1">
+            <input type="radio" name="searchMode" value="openai" class="form-radio text-blue-500 mt-1">
             <span class="ml-2">
-              <span class="font-medium">Vector</span><br>
-              <span class="text-sm text-gray-400">Finds similar documents based on content using TF-IDF</span>
+              <span class="font-medium">OpenAI Embeddings</span><br>
+              <span class="text-sm text-gray-400">Leverages OpenAI's embeddings model for state-of-the-art semantic
+                search</span>
+            </span>
+          </label>
+          <label class="flex items-start">
+            <input type="radio" name="searchMode" value="bert" class="form-radio text-blue-500 mt-1">
+            <span class="ml-2">
+              <span class="font-medium">BERT Embeddings</span><br>
+              <span class="text-sm text-gray-400">Uses BERT embeddings for fast semantic similarity
+                search</span>
+            </span>
+          </label>
+          <label class="flex items-start">
+            <input type="radio" name="searchMode" value="sentence_transformers" class="form-radio text-blue-500 mt-1">
+            <span class="ml-2">
+              <span class="font-medium">Sentence Transformers</span><br>
+              <span class="text-sm text-gray-400">Uses Sentence Transformers for advanced semantic search</span>
             </span>
           </label>
           <label class="flex items-start">
             <input type="radio" name="searchMode" value="hybrid" class="form-radio text-blue-500 mt-1">
             <span class="ml-2">
               <span class="font-medium">Hybrid</span><br>
-              <span class="text-sm text-gray-400">Combines multiple search techniques for balanced results</span>
+              <span class="text-sm text-gray-400">Combines full-text and Ada embeddings for balanced results</span>
             </span>
           </label>
         </div>
-      </form>
-      <div id="results" class="space-y-4"></div>
+    </div>
+    </div>
+    </form>
+    <div id="results" class="space-y-4"></div>
     </div>
   </main>
 

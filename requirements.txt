@@ -1,5 +1,14 @@
 Flask
-markdown
 PyPDF2
-scikit-learn
+faiss-cpu
+flask
+langchain
+langchain-community
+langchain-openai
+markdown
 numpy
+scikit-learn
+sentence-transformers
+torch
+tiktoken
+transformers

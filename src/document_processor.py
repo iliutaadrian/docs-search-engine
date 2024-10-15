@@ -1,10 +1,8 @@
-# document_processor.py
-
 import os
 import sqlite3
 import markdown
 from PyPDF2 import PdfReader
-from config import DB_PATH, DOCS_FOLDER
+from config.config import DB_PATH, DOCS_FOLDER
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)

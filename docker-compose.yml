@@ -7,9 +7,9 @@ services:
       - "5017:5000"
     volumes:
       - .:/app
-      - ./docs-gg:/docs
+      - ./docs-gg:/app/docs
       - ./data:/app/data
     environment:
       - FLASK_ENV=development
       - FLASK_DEBUG=1
-    command: python /app/app.py
+    command: python /app/src/app.py
