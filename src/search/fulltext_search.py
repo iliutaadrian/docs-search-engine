@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import re
 from config.config import DB_PATH
 
 def init(documents):
@@ -9,8 +10,8 @@ def search(query):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
-    terms = query.split()
-    fts_query = ' AND '.join(terms)
+    terms = preprocess_query(query)
+    fts_query = construct_fts_query(terms)
     
     c.execute("""
         SELECT 
@@ -44,3 +45,31 @@ def search(query):
     
     final_results.sort(key=lambda x: x['occurrence_count'], reverse=True)
     return final_results
+
+def preprocess_query(query):
+    terms = re.findall(r'"[^"]*"|\S+', query)
+    
+    # Remove quotes from phrases and handle hyphenated words
+    processed_terms = []
+    for term in terms:
+        if term.startswith('"') and term.endswith('"'):
+            processed_terms.append(term.strip('"'))
+        elif '-' in term:
+            processed_terms.append(f'"{term}"')  # Treat hyphenated words as phrases
+        else:
+            processed_terms.append(term)
+    
+    return processed_terms
+
+def construct_fts_query(terms):
+    # Construct the FTS query using the NEAR operator for phrases and AND for single words
+    fts_parts = []
+    for term in terms:
+        if ' ' in term:
+            # For phrases, use the NEAR operator with a small distance
+            words = term.split()
+            fts_parts.append(' NEAR/2 '.join(words))
+        else:
+            fts_parts.append(term)
+    
+    return ' AND '.join(fts_parts)
