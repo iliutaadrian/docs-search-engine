@@ -10,6 +10,7 @@ def search(query):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
+    # Preprocess the query
     terms = preprocess_query(query)
     fts_query = construct_fts_query(terms)
     
@@ -47,6 +48,7 @@ def search(query):
     return final_results
 
 def preprocess_query(query):
+    # Split the query into terms, preserving quoted phrases and hyphenated words
     terms = re.findall(r'"[^"]*"|\S+', query)
     
     # Remove quotes from phrases and handle hyphenated words

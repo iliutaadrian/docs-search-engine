@@ -29,6 +29,9 @@ def extract_content(file_path):
         with open(file_path, 'rb') as f:
             reader = PdfReader(f)
             return ' '.join(page.extract_text() for page in reader.pages)
+    elif file_path.endswith('.txt'):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
 
 def index_documents():
     conn = sqlite3.connect(DB_PATH)
