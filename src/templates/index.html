@@ -4,8 +4,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Docu Seek</title>
+  <title>Docu Seek Admin Playground</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
     .highlight,
     mark {
@@ -39,10 +40,14 @@
       border-color: #3B82F6 !important;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
     }
+
+    [x-cloak] {
+      display: none;
+    }
   </style>
 </head>
 
-<body class="bg-gray-900 text-gray-100">
+<body class="bg-gray-900 text-gray-100" x-data="searchApp()">
   <header class="bg-gray-800 shadow">
     <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
       <h1 class="text-3xl font-bold text-gray-100">Docu Seek Admin Playground</h1>
@@ -51,441 +56,296 @@
 
   <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
     <div class="px-4 py-6 sm:px-0">
-      <form id="searchForm" class="mb-6 w-full">
+      <form id="searchForm" class="mb-6 w-full" @submit.prevent="performSearch">
         <div class="relative mb-4">
-          <input type="text" id="searchInput" value="redis" placeholder="Search documentation"
+          <input type="text" id="searchInput" x-model="query" placeholder="Search documentation"
+            :class="{'typeahead-active': typeaheadEnabled}" @input="handleTypeahead" @blur="handleBlur"
             class="w-full py-3 px-4 pr-12 text-lg bg-gray-700 border border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-100 placeholder-gray-400">
           <button type="submit"
             class="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
             Search
           </button>
-          <div id="typeaheadSuggestions" class="typeahead-suggestions hidden"></div>
+          <div id="typeaheadSuggestions" class="typeahead-suggestions" x-show="typeaheadSuggestions.length > 0" x-cloak>
+            <template x-for="suggestion in typeaheadSuggestions" :key="suggestion">
+              <div class="typeahead-suggestion" x-text="suggestion" @click="selectTypeaheadSuggestion(suggestion)">
+              </div>
+            </template>
+          </div>
         </div>
+
         <div class="space-y-4">
           <h2 class="text-lg font-semibold">Search Methods</h2>
 
-          <!-- Syntactic Search Methods -->
-          <div id="syntacticMethods">
-            <h3 class="text-md font-medium mb-2">Syntactic Search Methods</h3>
-            <div class="space-y-2 ml-4">
-              <label class="flex items-center">
-                <input type="radio" name="searchMode" value="fulltext" checked class="form-radio text-blue-500">
-                <span class="ml-2 flex items-center">
-                  <span class="font-medium mr-2">Full-Text Search (FTS)</span>
-                  <span class="text-sm text-gray-400 mr-2">Quick word-based search using an index. Good for exact
-                    matches.</span>
-                  <a href="https://en.wikipedia.org/wiki/Full-text_search" target="_blank" rel="noopener noreferrer"
-                    class="text-xs text-blue-500 hover:underline">Learn more</a>
-                </span>
-              </label>
-              <label class="flex items-center">
-                <input type="radio" name="searchMode" value="bm25" class="form-radio text-blue-500">
-                <span class="ml-2 flex items-center">
-                  <span class="font-medium mr-2">BM25</span>
-                  <span class="text-sm text-gray-400 mr-2">Ranks documents by relevance to a search query.</span>
-                  <a href="https://en.wikipedia.org/wiki/Okapi_BM25" target="_blank" rel="noopener noreferrer"
-                    class="text-xs text-blue-500 hover:underline">Learn more</a>
-                </span>
-              </label>
-              <label class="flex items-center">
-                <input type="radio" name="searchMode" value="tfidf" class="form-radio text-blue-500">
-                <span class="ml-2 flex items-center">
-                  <span class="font-medium mr-2">TF-IDF</span>
-                  <span class="text-sm text-gray-400 mr-2">Finds important words in documents for similarity
-                    matching.</span>
-                  <a href="https://en.wikipedia.org/wiki/Tf%E2%80%93idf" target="_blank" rel="noopener noreferrer"
-                    class="text-xs text-blue-500 hover:underline">Learn more</a>
-                </span>
-              </label>
+          <template x-for="(methodGroup, groupName) in methodGroups" :key="groupName">
+            <div>
+              <h3 class="text-md font-medium mb-2" x-text="methodGroup.title"></h3>
+              <div class="space-y-2 ml-4">
+                <template x-for="method in methodGroup.methods" :key="method.value">
+                  <label class="flex items-center">
+                    <input :type="methodGroup.inputType" :name="groupName" :value="method.value"
+                      x-model="selectedMethods[groupName]"
+                      :class="{'form-radio': methodGroup.inputType === 'radio', 'form-checkbox': methodGroup.inputType === 'checkbox'}"
+                      class="text-blue-500">
+                    <span class="ml-2 flex items-center">
+                      <span class="font-medium mr-2" x-text="method.name"></span>
+                      <span class="text-sm text-gray-400 mr-2" x-text="method.description"></span>
+                      <a :href="method.learnMoreUrl" target="_blank" rel="noopener noreferrer"
+                        class="text-xs text-blue-500 hover:underline">Learn more</a>
+                    </span>
+                  </label>
+                </template>
+              </div>
             </div>
-          </div>
-
-          <!-- Semantic Search Methods -->
-          <div id="semanticMethods">
-            <h3 class="text-md font-medium mb-2">Semantic Search Methods</h3>
-            <div class="space-y-2 ml-4">
-              <label class="flex items-center">
-                <input type="radio" name="searchMode" value="openai" class="form-radio text-blue-500">
-                <span class="ml-2 flex items-center">
-                  <span class="font-medium mr-2">OpenAI Embeddings</span>
-                  <span class="text-sm text-gray-400 mr-2">Uses AI to understand context and meaning in searches.</span>
-                  <a href="https://en.wikipedia.org/wiki/Word_embedding" target="_blank" rel="noopener noreferrer"
-                    class="text-xs text-blue-500 hover:underline">Learn more</a>
-                </span>
-              </label>
-              <label class="flex items-center">
-                <input type="radio" name="searchMode" value="bert" class="form-radio text-blue-500">
-                <span class="ml-2 flex items-center">
-                  <span class="font-medium mr-2">BERT Embeddings</span>
-                  <span class="text-sm text-gray-400 mr-2">Captures context-dependent meanings in text.</span>
-                  <a href="https://en.wikipedia.org/wiki/BERT_(language_model)" target="_blank"
-                    rel="noopener noreferrer" class="text-xs text-blue-500 hover:underline">Learn more</a>
-                </span>
-              </label>
-              <label class="flex items-center">
-                <input type="radio" name="searchMode" value="sentence_transformers" class="form-radio text-blue-500">
-                <span class="ml-2 flex items-center">
-                  <span class="font-medium mr-2">Sentence Transformers</span>
-                  <span class="text-sm text-gray-400 mr-2">Compares semantic similarity between sentences.</span>
-                  <a href="https://en.wikipedia.org/wiki/Sentence_embedding" target="_blank" rel="noopener noreferrer"
-                    class="text-xs text-blue-500 hover:underline">Learn more</a>
-                </span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Search Aggregation Methods -->
-          <div>
-            <h3 class="text-md font-medium mb-2">Search Aggregation Methods</h3>
-            <div class="space-y-2 ml-4">
-              <label class="flex items-center">
-                <input type="radio" name="searchMode" value="standard" checked
-                  class="form-radio text-blue-500 hybrid-method">
-                <span class="ml-2 flex items-center">
-                  <span class="font-medium mr-2">Standard Search</span>
-                  <span class="text-sm text-gray-400 mr-2">Default search method combining multiple techniques for
-                    optimal results.</span>
-                </span>
-              </label>
-              <label class="flex items-center">
-                <input type="radio" name="searchMode" value="linear" class="form-radio text-blue-500 hybrid-method">
-                <span class="ml-2 flex items-center">
-                  <span class="font-medium mr-2">Linear Combination</span>
-                  <span class="text-sm text-gray-400 mr-2">Combines scores from multiple methods using weighted
-                    averages.</span>
-                  <a href="https://en.wikipedia.org/wiki/Ensemble_learning" target="_blank" rel="noopener noreferrer"
-                    class="text-xs text-blue-500 hover:underline">Learn more</a>
-                </span>
-              </label>
-              <label class="flex items-center">
-                <input type="radio" name="searchMode" value="rrf" class="form-radio text-blue-500 hybrid-method">
-                <span class="ml-2 flex items-center">
-                  <span class="font-medium mr-2">Reciprocal Rank Fusion</span>
-                  <span class="text-sm text-gray-400 mr-2">Combines rankings from multiple search methods.</span>
-                  <a href="https://en.wikipedia.org/wiki/Rank_aggregation" target="_blank" rel="noopener noreferrer"
-                    class="text-xs text-blue-500 hover:underline">Learn more</a>
-                </span>
-              </label>
-              <label class="flex items-center">
-                <input type="radio" name="searchMode" value="cascade" class="form-radio text-blue-500 hybrid-method">
-                <span class="ml-2 flex items-center">
-                  <span class="font-medium mr-2">Cascade Search</span>
-                  <span class="text-sm text-gray-400 mr-2">Applies methods sequentially, using each to filter or re-rank
-                    results.</span>
-                  <a href="https://en.wikipedia.org/wiki/Enterprise_search" target="_blank" rel="noopener noreferrer"
-                    class="text-xs text-blue-500 hover:underline">Learn more</a>
-                </span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Additional Options -->
-          <div>
-            <h3 class="text-md font-medium mb-2">Additional Options</h3>
-            <div class="space-y-2 ml-4">
-              <label class="flex items-center">
-                <input type="checkbox" name="additionalOptions" value="popularity_rank"
-                  class="form-checkbox text-blue-500">
-                <span class="ml-2 flex items-center">
-                  <span class="font-medium mr-2">Popularity Ranking</span>
-                  <span class="text-sm text-gray-400 mr-2">Ranks results based on popularity and user behavior.</span>
-                  <a href="https://en.wikipedia.org/wiki/PageRank" target="_blank" rel="noopener noreferrer"
-                    class="text-xs text-blue-500 hover:underline">Learn more</a>
-                </span>
-              </label>
-              <label class="flex items-center">
-                <input type="checkbox" name="additionalOptions" value="caching" class="form-checkbox text-blue-500">
-                <span class="ml-2 flex items-center">
-                  <span class="font-medium mr-2">Query Caching</span>
-                  <span class="text-sm text-gray-400 mr-2">Cache query and search results for faster retrieval.</span>
-                  <a href="https://en.wikipedia.org/wiki/Cache_(computing)" target="_blank" rel="noopener noreferrer"
-                    class="text-xs text-blue-500 hover:underline">Learn more</a>
-                </span>
-              </label>
-              <label class="flex items-center">
-                <input type="checkbox" name="additionalOptions" value="ai_assist" class="form-checkbox text-blue-500">
-                <span class="ml-2 flex items-center">
-                  <span class="font-medium mr-2">AI-Assisted Search</span>
-                  <span class="text-sm text-gray-400 mr-2">Include AI analysis and summary of search results.</span>
-                  <a href="https://en.wikipedia.org/wiki/Artificial_intelligence_in_computer-aided_technologies"
-                    target="_blank" rel="noopener noreferrer" class="text-xs text-blue-500 hover:underline">Learn
-                    more</a>
-                </span>
-              </label>
-              <label class="flex items-center">
-                <input type="checkbox" name="additionalOptions" value="typeahead" class="form-checkbox text-blue-500">
-                <span class="ml-2 flex items-center">
-                  <span class="font-medium mr-2">Typeahead Support</span>
-                  <span class="text-sm text-gray-400 mr-2">Enable search suggestions as you type.</span>
-                  <a href="https://en.wikipedia.org/wiki/Autocomplete" target="_blank" rel="noopener noreferrer"
-                    class="text-xs text-blue-500 hover:underline">Learn more</a>
-                </span>
-              </label>
-            </div>
-          </div>
+          </template>
         </div>
       </form>
 
-      <div id="aiResponse" class="mb-6 hidden">
+      <!-- Loading indicator -->
+      <div x-show="isLoading" class="text-center py-4">
+        <svg class="animate-spin h-10 w-10 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none"
+          viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+          </path>
+        </svg>
+        <p class="mt-2 text-gray-400">Loading results...</p>
+      </div>
+
+      <!-- AI Response -->
+      <div id="aiResponse" class="mb-6" x-show="aiResponse && !isLoading" x-cloak>
         <h2 class="text-xl font-bold text-gray-100 mb-4">AI Response:</h2>
         <div class="bg-gray-800 p-4 rounded-lg shadow">
           <pre id="aiResponseContent"
-            class="text-gray-200 whitespace-pre-wrap break-words font-mono text-sm leading-relaxed max-h-96 overflow-y-auto">
-          </pre>
+            class="text-gray-200 whitespace-pre-wrap break-words font-mono text-sm leading-relaxed max-h-96 overflow-y-auto"
+            x-text="aiResponse"></pre>
         </div>
       </div>
-      <div id="results" class="space-y-4"></div>
+
+      <!-- Search Results -->
+      <div id="results" class="space-y-4" x-show="!isLoading">
+        <template x-if="searchResults.length === 0 && searchPerformed">
+          <p class="text-center text-gray-400">No results found.</p>
+        </template>
+        <template x-if="searchResults.length > 0">
+          <div>
+            <h2 class="text-xl font-bold text-gray-100 mb-4">
+              Search Results (<span x-text="displaySearchType"></span> mode)
+            </h2>
+            <template x-for="(result, index) in searchResults" :key="index">
+              <div class="bg-gray-800 p-4 rounded-lg shadow mb-4">
+                <div class="mb-2">
+                  <h3 class="text-lg font-semibold text-gray-100" x-html="highlightMatches(result.name, searchedQuery)">
+                  </h3>
+                  <p class="text-sm text-gray-400 mt-1">Path: <span x-text="result.path"></span></p>
+                  <p class="text-sm text-blue-400 mt-1">Occurrences: <span x-text="result.occurrence_count"></span></p>
+                </div>
+                <div class="border-t border-gray-700 pt-2">
+                  <div class="overflow-auto max-h-40">
+                    <pre class="text-xs text-gray-200 whitespace-pre-wrap"
+                      x-html="highlightMatches(escapeHtml(result.content_snippet), searchedQuery)"></pre>
+                  </div>
+                  <p class="text-sm text-gray-400 mt-2">Content length: <span x-text="result.content_length"></span></p>
+                </div>
+                <div class="mt-2">
+                  <button @click="toggleFullContent(index)" class="text-xs text-blue-400 cursor-pointer">
+                    <span x-text="result.showFullContent ? 'Hide full content' : 'Show full content'"></span>
+                  </button>
+                  <div x-show="result.showFullContent" class="mt-2">
+                    <div class="overflow-auto max-h-96">
+                      <pre class="text-xs text-gray-300 whitespace-pre-wrap" x-html="result.highlighted_content"></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
     </div>
   </main>
 
   <script>
-document.addEventListener('DOMContentLoaded', function () {
-  const searchForm = document.getElementById('searchForm');
-  const searchInput = document.getElementById('searchInput');
-  const typeaheadSuggestions = document.getElementById('typeaheadSuggestions');
-  const typeaheadCheckbox = document.querySelector('input[name="additionalOptions"][value="typeahead"]');
-  const hybridMethods = document.querySelectorAll('.hybrid-method');
-  const syntacticMethods = document.getElementById('syntacticMethods');
-  const semanticMethods = document.getElementById('semanticMethods');
-  const standardSearch = document.querySelector('input[name="searchMode"][value="standard"]');
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('searchApp', () => ({
+        query: 'redis',
+        searchedQuery: '',
+        selectedMethods: {
+          aggregationMethods: 'single',
+          syntacticMethods: ['fulltext'],
+          semanticMethods: [],
+          additionalOptions: []
+        },
+        typeaheadEnabled: false,
+        typeaheadSuggestions: [],
 
-  let typeaheadEnabled = false;
-  let typeaheadTimeout = null;
+        searchResults: [],
+        aiResponse: '',
 
-  function resetToStandard() {
-    convertToRadios(syntacticMethods);
-    convertToRadios(semanticMethods);
-    hybridMethods.forEach(method => {
-      if (method.value !== 'standard') {
-        method.checked = false;
-      }
+        searchPerformed: false,
+        isSingleMode: true,
+        isLoading: false,
+
+        methodGroups: {
+          syntacticMethods: {
+            title: 'Syntactic Search Methods',
+            inputType: 'checkbox',
+            methods: [
+              {value: 'fulltext', name: 'Full-Text Search (FTS)', description: 'Quick word-based search using an index. Good for exact matches.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Full-text_search'},
+              {value: 'bm25', name: 'BM25', description: 'Ranks documents by relevance to a search query.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Okapi_BM25'},
+              {value: 'tfidf', name: 'TF-IDF', description: 'Finds important words in documents for similarity matching.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Tf%E2%80%93idf'}
+            ]
+          },
+          semanticMethods: {
+            title: 'Semantic Search Methods',
+            inputType: 'checkbox',
+            methods: [
+              {value: 'openai', name: 'OpenAI Embeddings', description: 'Uses AI to understand context and meaning in searches.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Word_embedding'},
+              {value: 'bert', name: 'BERT Embeddings', description: 'Captures context-dependent meanings in text.', learnMoreUrl: 'https://en.wikipedia.org/wiki/BERT_(language_model)'},
+              {value: 'sentence_transformers', name: 'Sentence Transformers', description: 'Compares semantic similarity between sentences.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Sentence_embedding'}
+            ]
+          },
+          aggregationMethods: {
+            title: 'Search Aggregation Methods',
+            inputType: 'radio',
+            methods: [
+              {value: 'single', name: 'Single Search', description: 'Default search method combining multiple techniques for optimal results.'},
+              {value: 'linear', name: 'Linear Combination', description: 'Combines scores from multiple methods using weighted averages.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Ensemble_learning'},
+              {value: 'rrf', name: 'Reciprocal Rank Fusion', description: 'Combines rankings from multiple search methods.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Rank_aggregation'},
+              {value: 'cascade', name: 'Cascade Search', description: 'Applies methods sequentially, using each to filter or re-rank results.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Enterprise_search'}
+            ]
+          },
+          additionalOptions: {
+            title: 'Additional Options',
+            inputType: 'checkbox',
+            methods: [
+              {value: 'popularity_rank', name: 'Popularity Ranking', description: 'Ranks results based on popularity and user behavior.', learnMoreUrl: 'https://en.wikipedia.org/wiki/PageRank'},
+              {value: 'caching', name: 'Query Caching', description: 'Cache query and search results for faster retrieval.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Cache_(computing)'},
+              {value: 'ai_assist', name: 'AI-Assisted Search', description: 'Include AI analysis and summary of search results.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Artificial_intelligence_in_computer-aided_technologies'},
+              {value: 'typeahead', name: 'Typeahead Support', description: 'Enable search suggestions as you type.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Autocomplete'}
+            ]
+          }
+        },
+
+        init() {
+          this.$watch('selectedMethods', (value) => this.handleMethodChange(value), {deep: true});
+        },
+
+        handleMethodChange(vaue) {
+          this.isSingleMode = this.selectedMethods.aggregationMethods === 'single';
+          this.typeaheadEnabled = this.selectedMethods.additionalOptions.includes('typeahead');
+
+          if (this.isSingleMode) {
+            const allMethods = [...this.selectedMethods.semanticMethods, ...this.selectedMethods.syntacticMethods,];
+            if (allMethods.length > 1) {
+              const lastSelected = allMethods[allMethods.length - 1];
+              this.selectedMethods.syntacticMethods = this.methodGroups.syntacticMethods.methods.some(m => m.value === lastSelected) ? [lastSelected] : [];
+              this.selectedMethods.semanticMethods = this.methodGroups.semanticMethods.methods.some(m => m.value === lastSelected) ? [lastSelected] : [];
+            }
+          }
+        },
+
+        handleBlur() {
+          setTimeout(() => {
+            this.typeaheadSuggestions = [];
+          }, 150);
+        },
+
+        async handleTypeahead() {
+          if (!this.typeaheadEnabled || this.query.length < 2) {
+            this.typeaheadSuggestions = [];
+            return;
+          }
+
+          try {
+            const response = await fetch(`/typeahead?q=${encodeURIComponent(this.query)}`);
+            this.typeaheadSuggestions = await response.json();
+          } catch (error) {
+            console.error('Typeahead error:', error);
+            this.typeaheadSuggestions = [];
+          }
+        },
+
+        selectTypeaheadSuggestion(suggestion) {
+          this.query = suggestion;
+          this.typeaheadSuggestions = [];
+        },
+
+        async performSearch() {
+          if (!this.query.trim()) return;
+
+          this.searchedQuery = this.query;
+          this.searchResults = [];
+          this.aiResponse = '';
+          this.searchPerformed = true;
+          this.isLoading = true;
+
+          this.displaySearchType = this.selectedMethods.aggregationMethods + ' - ' + [...this.selectedMethods.syntacticMethods, ...this.selectedMethods.semanticMethods].join(', ');
+
+          const searchParams = new URLSearchParams({
+            q: this.query,
+            aggregationMethod: this.selectedMethods.aggregationMethods,
+            syntacticMethods: JSON.stringify(this.selectedMethods.syntacticMethods),
+            semanticMethods: JSON.stringify(this.selectedMethods.semanticMethods),
+            options: JSON.stringify(this.selectedMethods.additionalOptions)
+          });
+
+          try {
+            const response = await fetch(`/search?${searchParams}`);
+            const data = await response.json();
+
+            if (this.selectedMethods.additionalOptions.includes('ai_assist')) {
+              this.aiResponse = data.ai_response;
+              this.searchResults = data.search_results;
+            } else {
+              this.searchResults = data;
+            }
+
+            this.searchResults.forEach(result => result.showFullContent = false);
+          } catch (error) {
+            console.error('Search error:', error);
+            this.searchResults = [];
+            this.aiResponse = 'Failed to perform search. Please try again.';
+          } finally {
+            this.isLoading = false;
+          }
+        },
+
+        highlightMatches(text, currentQuery) {
+          if (!this.searchPerformed) return text;
+
+          const highlightTerm = (term, className) => {
+            const regex = new RegExp(`\\b(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\b`, 'gi');
+            return (match) => `<span class="${className}">${match}</span>`;
+          };
+
+          let highlightedText = text;
+          const initialTerms = currentQuery.trim().toLowerCase().split(/\s+/);
+          initialTerms.forEach(term => {
+            highlightedText = highlightedText.replace(
+              new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'),
+              highlightTerm(term, 'highlight')
+            );
+          });
+          return highlightedText;
+        },
+
+        toggleFullContent(index) {
+          this.searchResults[index].showFullContent = !this.searchResults[index].showFullContent;
+        },
+
+        escapeHtml(unsafe) {
+          return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+        },
+
+      }));
     });
-    // Select the first radio button in each method group
-    syntacticMethods.querySelector('input[type="radio"]').checked = true;
-    semanticMethods.querySelector('input[type="radio"]').checked = true;
-  }
+  </script>
+</body>
 
-  standardSearch.addEventListener('change', function () {
-    if (this.checked) {
-      resetToStandard();
-    }
-  });
-
-  hybridMethods.forEach(method => {
-    method.addEventListener('change', function () {
-      if (this.checked && this.value !== 'standard') {
-        convertToCheckboxes(syntacticMethods);
-        convertToCheckboxes(semanticMethods);
-        standardSearch.checked = false;
-      }
-    });
-  });
-
-  function convertToCheckboxes(methodsContainer) {
-    const inputs = methodsContainer.querySelectorAll('input[type="radio"]');
-    inputs.forEach(input => {
-      input.type = 'checkbox';
-      input.name = 'hybridMethods';
-    });
-  }
-
-  function convertToRadios(methodsContainer) {
-    const inputs = methodsContainer.querySelectorAll('input[type="checkbox"]');
-    inputs.forEach(input => {
-      input.type = 'radio';
-      input.name = 'searchMode';
-    });
-  }
-
-  typeaheadCheckbox.addEventListener('change', function () {
-    typeaheadEnabled = this.checked;
-    if (typeaheadEnabled) {
-      searchInput.addEventListener('input', handleTypeahead);
-      searchInput.classList.add('typeahead-active');
-    } else {
-      searchInput.removeEventListener('input', handleTypeahead);
-      searchInput.classList.remove('typeahead-active');
-      typeaheadSuggestions.innerHTML = '';
-      typeaheadSuggestions.classList.add('hidden');
-    }
-  });
-
-  function handleTypeahead() {
-    clearTimeout(typeaheadTimeout);
-    const query = searchInput.value.trim();
-
-    if (query.length >= 2) {
-      typeaheadTimeout = setTimeout(() => {
-        fetchTypeaheadSuggestions(query);
-      }, 300);
-    } else {
-      typeaheadSuggestions.innerHTML = '';
-      typeaheadSuggestions.classList.add('hidden');
-    }
-  }
-
-  function fetchTypeaheadSuggestions(query) {
-    fetch(`/typeahead?q=${encodeURIComponent(query)}`)
-      .then(response => response.json())
-      .then(suggestions => {
-        displayTypeaheadSuggestions(suggestions);
-      })
-      .catch(error => {
-        console.error('Typeahead error:', error);
-      });
-  }
-
-  function displayTypeaheadSuggestions(suggestions) {
-    typeaheadSuggestions.innerHTML = '';
-    if (suggestions.length > 0) {
-      suggestions.forEach(suggestion => {
-        const div = document.createElement('div');
-        div.className = 'typeahead-suggestion';
-        div.textContent = suggestion;
-        div.addEventListener('click', () => {
-          searchInput.value = suggestion;
-          typeaheadSuggestions.innerHTML = '';
-          typeaheadSuggestions.classList.add('hidden');
-        });
-        typeaheadSuggestions.appendChild(div);
-      });
-      typeaheadSuggestions.classList.remove('hidden');
-    } else {
-      typeaheadSuggestions.classList.add('hidden');
-    }
-  }
-
-  searchForm.addEventListener('submit', function (e) {
-    e.preventDefault();
-    const query = searchInput.value;
-    const mode = document.querySelector('input[name="searchMode"]:checked').value;
-    const additionalOptions = Array.from(document.querySelectorAll('input[name="additionalOptions"]:checked'))
-      .map(checkbox => checkbox.value);
-
-    let selectedMethods = [];
-    if (mode !== 'standard') {
-      selectedMethods = Array.from(document.querySelectorAll('input[name="hybridMethods"]:checked'))
-        .map(checkbox => checkbox.value);
-    }
-
-    if (query.trim()) {
-      performSearch(query, mode, additionalOptions, selectedMethods);
-    }
-  });
-
-  function performSearch(query, mode, additionalOptions, selectedMethods) {
-    const resultsContainer = document.getElementById('results');
-    const aiResponseContainer = document.getElementById('aiResponse');
-    resultsContainer.innerHTML = '<p class="text-center text-gray-400">Searching...</p>';
-    aiResponseContainer.classList.add('hidden');
-
-    let searchParams;
-    if (mode === 'standard') {
-      // For standard search, use the selected radio button value
-      const selectedMethod = document.querySelector('input[name="searchMode"]:checked:not(.hybrid-method)').value;
-      searchParams = new URLSearchParams({
-        q: query,
-        mode: selectedMethod,
-        options: JSON.stringify(additionalOptions)
-      });
-    } else {
-      // For other aggregation methods, use the selected checkboxes
-      searchParams = new URLSearchParams({
-        q: query,
-        mode: mode,
-        options: JSON.stringify(additionalOptions),
-        methods: JSON.stringify(selectedMethods)
-      });
-    }
-
-    fetch(`/search?${searchParams}`)
-      .then(response => response.json())
-      .then(data => {
-        resultsContainer.innerHTML = '';
-        if (additionalOptions.includes('ai_assist')) {
-          displayAIResponse(data.ai_response);
-          displaySearchResults(data.search_results, query, mode, selectedMethods);
-        } else {
-          displaySearchResults(data, query, mode, selectedMethods);
-        }
-      })
-      .catch(error => {
-        console.error('Search error:', error);
-        resultsContainer.innerHTML = '<p class="text-red-400">Failed to perform search. Please try again.</p>';
-      });
-  }
-
-  function displayAIResponse(aiResponse) {
-    const aiResponseContainer = document.getElementById('aiResponse');
-    const aiResponseContent = document.getElementById('aiResponseContent');
-    aiResponseContent.textContent = aiResponse;
-    aiResponseContainer.classList.remove('hidden');
-  }
-
-  function displaySearchResults(results, query, mode, selectedMethods) {
-    const resultsContainer = document.getElementById('results');
-    if (results.length === 0) {
-      resultsContainer.innerHTML = '<p class="text-center text-gray-400">No results found.</p>';
-    } else {
-      const resultsHtml = results.map((result, index) => `
-        <div class="bg-gray-800 p-4 rounded-lg shadow mb-4">
-          <div class="mb-2">
-            <h3 class="text-lg font-semibold text-gray-100">${highlightMatches(result.name, query)}</h3>
-            <p class="text-sm text-gray-400 mt-1">Path: ${result.path}</p>
-            <p class="text-sm text-blue-400 mt-1">Occurrences: ${result.occurrence_count}</p>
-          </div>
-          <div class="border-t border-gray-700 pt-2">
-            <div class="overflow-auto max-h-40">
-              <pre class="text-xs text-gray-200 whitespace-pre-wrap">${highlightMatches(escapeHtml(result.content_snippet), query)}</pre>
-            </div>
-            <p class="text-xs text-gray-400 mt-2">Content length: ${result.content_length}</p>
-          </div>
-          <div class="mt-2">
-            <button onclick="toggleFullContent(${index})" class="text-xs text-blue-400 cursor-pointer">
-              Show full content
-            </button>
-            <div id="fullContent${index}" class="hidden mt-2">
-              <div class="overflow-auto max-h-96">
-                <pre class="text-xs text-gray-300 whitespace-pre-wrap">${result.highlighted_content}</pre>
-              </div>
-            </div>
-          </div>
-        </div>
-      `).join('');
-      resultsContainer.innerHTML = `
-        <h2 class="text-xl font-bold text-gray-100 mb-4">Search Results (${mode} mode${selectedMethods.length > 0 ? ` with ${selectedMethods.join(', ')}` : ''}):</h2>
-        ${resultsHtml}
-      `;
-    }
-  }
-
-  function escapeHtml(unsafe) {
-    return unsafe
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
-  function highlightMatches(text, query) {
-    const words = query.split(/\s+/).map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const regex = new RegExp(`(${words.join('|')})`, 'gi');
-    return text.replace(regex, '<span class="highlight">$1</span>');
-  }
-
-  window.toggleFullContent = function (index) {
-    const fullContentDiv = document.getElementById(`fullContent${index}`);
-    const button = fullContentDiv.previousElementSibling;
-    if (fullContentDiv.classList.contains('hidden')) {
-      fullContentDiv.classList.remove('hidden');
-      button.textContent = 'Hide full content';
-    } else {
-      fullContentDiv.classList.add('hidden');
-      button.textContent = 'Show full content';
-    }
-  }
-});
-</script>
-    </body>
-  </html>
+</html>
