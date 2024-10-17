@@ -29,12 +29,13 @@ def search():
     if not query:
         return jsonify({"error": "No query provided"}), 400
 
+    search_methods = syntactic_methods + semantic_methods
+
     if 'caching' in options:
-        cached_results = get_results(query)
+        cached_results = get_results(query, aggregation_method, search_methods, options)
         if cached_results:
             return jsonify(cached_results)
 
-    
     results = perform_search(query, aggregation_method, syntactic_methods, semantic_methods)
     
     if 'popularity_rank' in options:
@@ -50,7 +51,7 @@ def search():
     }
 
     if 'caching' in options:
-        store_results(query, results, ai_response)
+        store_results(query, aggregation_method, search_methods, options, results, response.get('ai_response'))
     
     return jsonify(response)
 

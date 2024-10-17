@@ -1,7 +1,6 @@
 from config.config import DATA_FOLDER
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 import json
-import os
 import os
 import sqlite3
 
@@ -18,7 +17,7 @@ def create_table():
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS cache (
-            query TEXT PRIMARY KEY,
+            cache_key TEXT PRIMARY KEY,
             search_results TEXT,
             ai_response TEXT,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -27,20 +26,35 @@ def create_table():
     conn.commit()
     conn.close()
 
-def store_results(query: str, search_results: List[Dict], ai_response: Optional[str] = None):
+def generate_cache_key(query: str, aggregation_method: str, search_methods: List[str], options: List[str]) -> str:
+    key_components = [
+        query,
+        aggregation_method,
+        ','.join(sorted(search_methods)),
+        ','.join(sorted(options))
+    ]
+    return '|'.join(key_components)
+
+def store_results(query: str, aggregation_method: str, search_methods: List[str], options: List[str], 
+                  search_results: List[Dict[str, Any]], ai_response: Optional[str] = None):
+    cache_key = generate_cache_key(query, aggregation_method, search_methods, options)
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    serialized_results = json.dumps(search_results)
+    
     cursor.execute('''
-        INSERT OR REPLACE INTO cache (query, search_results, ai_response)
+        INSERT OR REPLACE INTO cache (cache_key, search_results, ai_response)
         VALUES (?, ?, ?)
-    ''', (query, json.dumps(search_results), ai_response))
+    ''', (cache_key, serialized_results, ai_response))
     conn.commit()
     conn.close()
 
-def get_results(query: str) -> Optional[Dict]:
+def get_results(query: str, aggregation_method: str, search_methods: List[str], options: List[str]) -> Optional[Dict]:
+    cache_key = generate_cache_key(query, aggregation_method, search_methods, options)
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT search_results, ai_response FROM cache WHERE query = ?', (query,))
+    cursor.execute('SELECT search_results, ai_response FROM cache WHERE cache_key = ?', (cache_key,))
     result = cursor.fetchone()
     conn.close()
     if result:
@@ -56,4 +70,3 @@ def clear_cache():
     cursor.execute('DELETE FROM cache')
     conn.commit()
     conn.close()
-
