@@ -1,18 +1,17 @@
 from flask import Flask, request, jsonify, render_template
+
+from search import init_search_module
+from search.search_module import perform_search
+
+from cache import init_cache_module, store_results, get_results
+
+from llm.llm_module import init_llm, generate_ai_response
 from document_processor import init_processor
-from search.fulltext_search import init as init_fulltext, search as search_fulltext
-from search.tfidf_search import init as init_tfidf, search as search_tfidf
-from search.bm25_search import init as init_bm25, search as search_bm25
-from search.openai_search import init as init_openai, search as search_openai
-from search.bert_search import init as init_bert, search as search_bert
-from search.sentence_transformers_search import init as init_sentence_transformers, search as search_sentence_transformers
-from search.hybrid_search import search as hybrid_search
-from llm import init_llm, generate_ai_response
 from config.config import DOCS_FOLDER
 import json
 
-
 app = Flask(__name__)
+
 all_titles = []
 
 @app.route('/')
@@ -29,6 +28,12 @@ def search():
 
     if not query:
         return jsonify({"error": "No query provided"}), 400
+
+    if 'caching' in options:
+        cached_results = get_results(query)
+        if cached_results:
+            return jsonify(cached_results)
+
     
     results = perform_search(query, aggregation_method, syntactic_methods, semantic_methods)
     
@@ -43,31 +48,11 @@ def search():
         "search_results": results[:10],
         "ai_response": ai_response.get('full_content', '') if ai_response else None
     }
+
+    if 'caching' in options:
+        store_results(query, results, ai_response)
     
     return jsonify(response)
-
-def perform_search(query, aggregation_method, syntactic_methods, semantic_methods):
-    all_methods = syntactic_methods + semantic_methods
-    
-    if aggregation_method == 'single' and len(all_methods) == 1:
-        search_function = get_search_function(all_methods[0])
-        return search_function(query)
-    elif aggregation_method in ['linear', 'rank_fusion', 'cascade']:
-        return hybrid_search(query, methods=all_methods, combination_method=aggregation_method)
-    else:
-        # Default to fulltext search if no valid method is specified
-        return search_fulltext(query)
-
-def get_search_function(method):
-    search_functions = {
-        'fulltext': search_fulltext,
-        'tfidf': search_tfidf,
-        'bm25': search_bm25,
-        'openai': search_openai,
-        'bert': search_bert,
-        'sentence_transformers': search_sentence_transformers
-    }
-    return search_functions.get(method.lower(), search_fulltext)
 
 @app.route('/typeahead', methods=['GET'])
 def typeahead():
@@ -89,13 +74,10 @@ def init_typeahead(documents):
 if __name__ == '__main__':
     documents = init_processor()
 
-    init_fulltext(documents)
-    init_tfidf(documents)
-    init_bm25(documents)
-    init_openai(documents)
+    init_search_module(documents)
+    
+    init_cache_module()
 
-    init_bert(documents)
-    init_sentence_transformers(documents)
     init_llm()
     init_typeahead(documents)
     
