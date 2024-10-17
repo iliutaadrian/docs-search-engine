@@ -13,3 +13,4 @@ tiktoken
 transformers
 rank-bm25
 Cython
+beautifulsoup4

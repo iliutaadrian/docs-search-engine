@@ -138,15 +138,14 @@
             <template x-for="(result, index) in searchResults" :key="index">
               <div class="bg-gray-800 p-4 rounded-lg shadow mb-4">
                 <div class="mb-2">
-                  <h3 class="text-lg font-semibold text-gray-100" x-html="highlightMatches(result.name, searchedQuery)">
+                  <h3 class="text-lg font-semibold text-gray-100" x-html="result.highlighted_path.replace('/app/docs', '')">
                   </h3>
-                  <p class="text-sm text-gray-400 mt-1">Path: <span x-text="result.path"></span></p>
                   <p class="text-sm text-blue-400 mt-1">Occurrences: <span x-text="result.occurrence_count"></span></p>
                 </div>
                 <div class="border-t border-gray-700 pt-2">
                   <div class="overflow-auto max-h-40">
                     <pre class="text-xs text-gray-200 whitespace-pre-wrap"
-                      x-html="highlightMatches(escapeHtml(result.content_snippet), searchedQuery)"></pre>
+                      x-html="result.content_snippet"></pre>
                   </div>
                   <p class="text-sm text-gray-400 mt-2">Content length: <span x-text="result.content_length"></span></p>
                 </div>
@@ -177,7 +176,7 @@
           aggregationMethods: 'single',
           syntacticMethods: ['fulltext'],
           semanticMethods: [],
-          additionalOptions: ["ai_assist", 'caching', 'autocomplete']
+          additionalOptions: ["autocomplete"]
         },
         autocompleteEnabled: true,
         autocompleteSuggestions: [],
@@ -313,25 +312,6 @@
           } finally {
             this.isLoading = false;
           }
-        },
-
-        highlightMatches(text, currentQuery) {
-          if (!this.searchPerformed) return text;
-
-          const highlightTerm = (term, className) => {
-            const regex = new RegExp(`\\b(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\b`, 'gi');
-            return (match) => `<span class="${className}">${match}</span>`;
-          };
-
-          let highlightedText = text;
-          const initialTerms = currentQuery.trim().toLowerCase().split(/\s+/);
-          initialTerms.forEach(term => {
-            highlightedText = highlightedText.replace(
-              new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'),
-              highlightTerm(term, 'highlight')
-            );
-          });
-          return highlightedText;
         },
 
         toggleFullContent(index) {
