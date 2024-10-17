@@ -9,7 +9,6 @@ services:
       - .:/app
       - ./docs-gg:/app/docs
       - ./data:/app/data
-    environment:
-      - FLASK_ENV=development
-      - FLASK_DEBUG=1
+    env_file:
+      - .env
     command: python /app/src/app.py

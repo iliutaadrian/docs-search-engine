@@ -1,7 +1,6 @@
-Flask
+flask
 PyPDF2
 faiss-cpu
-flask
 langchain
 langchain-community
 langchain-openai
@@ -13,3 +12,4 @@ torch
 tiktoken
 transformers
 rank-bm25
+Cython

@@ -38,8 +38,6 @@ def generate_ai_response(query, search_results):
 
     # Print the actual prompt text
     formatted_prompt = prompt_template.format_prompt(context=context, query=query)
-    print("Actual Prompt Text:")
-    print(formatted_prompt.to_string())
 
     # Create and run the LLM chain
     chain = LLMChain(llm=llm, prompt=prompt_template)

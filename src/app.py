@@ -10,6 +10,8 @@ from document_processor import init_processor
 from config.config import DOCS_FOLDER
 import json
 
+from autocomplete import init_autocomplete, get_autocomplete_suggestions
+
 app = Flask(__name__)
 
 all_titles = []
@@ -55,31 +57,37 @@ def search():
     
     return jsonify(response)
 
-@app.route('/typeahead', methods=['GET'])
-def typeahead():
-    query = request.args.get('q', '').lower()
+@app.route('/autocomplete', methods=['GET'])
+def autocomplete():
+    query = request.args.get('q', '')
     if not query:
         return jsonify([])
-    suggestions = [title for title in all_titles if query in title.lower()]
-    return jsonify(suggestions[:10])  # Limit to 10 suggestions
+    
+    suggestions = get_autocomplete_suggestions(query)
+    return jsonify(suggestions)
+
 
 def apply_popularity_ranking(results):
     # This is a placeholder function. In a real-world scenario, you would implement
     # actual popularity ranking based on user behavior, document views, etc.
     return sorted(results, key=lambda x: x.get('popularity', 0), reverse=True)
 
-def init_typeahead(documents):
-    global all_titles
-    all_titles = [doc['path'].split('/')[-1] for doc in documents]
 
 if __name__ == '__main__':
+
+    print("\nInitializing documents", flush=True)
     documents = init_processor()
 
-    init_search_module(documents)
-    
+    # print("\nInitializing search module", flush=True)
+    # init_search_module(documents)
+    # 
+    print("\nInitializing cache module", flush=True)
     init_cache_module()
 
+    print("\nInitializing autocomplete module", flush=True)
+    init_autocomplete(documents)
+
+    print("\nInitializing LLM module", flush=True)
     init_llm()
-    init_typeahead(documents)
     
     app.run(debug=True, host='0.0.0.0')

@@ -16,7 +16,7 @@
       border-radius: 2px;
     }
 
-    .typeahead-suggestions {
+    .autocomplete-suggestions {
       position: absolute;
       z-index: 1000;
       background-color: #374151;
@@ -27,16 +27,16 @@
       overflow-y: auto;
     }
 
-    .typeahead-suggestion {
+    .autocomplete-suggestion {
       padding: 0.5rem 1rem;
       cursor: pointer;
     }
 
-    .typeahead-suggestion:hover {
+    .autocomplete-suggestion:hover {
       background-color: #4B5563;
     }
 
-    .typeahead-active {
+    .autocomplete-active {
       border-color: #3B82F6 !important;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
     }
@@ -58,16 +58,19 @@
     <div class="px-4 py-6 sm:px-0">
       <form id="searchForm" class="mb-6 w-full" @submit.prevent="performSearch">
         <div class="relative mb-4">
-          <input type="text" id="searchInput" x-model="query" placeholder="Search documentation"
-            :class="{'typeahead-active': typeaheadEnabled}" @input="handleTypeahead" @blur="handleBlur"
-            class="w-full py-3 px-4 pr-12 text-lg bg-gray-700 border border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-100 placeholder-gray-400" autocomplete="off">
+          <input type="text" id="searchInput" x-model="query" placeholder="Search documentation" x-ref="searchInput"
+            :class="{'autocomplete-active': autocompleteEnabled}" @input="handleAutocomplete" @blur="handleBlur"
+            class="w-full py-3 px-4 pr-12 text-lg bg-gray-700 border border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-100 placeholder-gray-400"
+            autocomplete="off">
           <button type="submit"
             class="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
             Search
           </button>
-          <div id="typeaheadSuggestions" class="typeahead-suggestions" x-show="typeaheadSuggestions.length > 0" x-cloak>
-            <template x-for="suggestion in typeaheadSuggestions" :key="suggestion">
-              <div class="typeahead-suggestion" x-text="suggestion" @click="selectTypeaheadSuggestion(suggestion)">
+          <div id="autocompleteSuggestions" class="autocomplete-suggestions" x-show="autocompleteSuggestions.length > 0"
+            x-cloak>
+            <template x-for="suggestion in autocompleteSuggestions" :key="suggestion">
+              <div class="autocomplete-suggestion" x-text="suggestion"
+                @click="selectAutocompleteSuggestion(suggestion)">
               </div>
             </template>
           </div>
@@ -174,10 +177,10 @@
           aggregationMethods: 'single',
           syntacticMethods: ['fulltext'],
           semanticMethods: [],
-          additionalOptions: ["ai_assist", 'caching']
+          additionalOptions: ["ai_assist", 'caching', 'autocomplete']
         },
-        typeaheadEnabled: false,
-        typeaheadSuggestions: [],
+        autocompleteEnabled: true,
+        autocompleteSuggestions: [],
 
         searchResults: [],
         aiResponse: '',
@@ -222,18 +225,19 @@
               {value: 'popularity_rank', name: 'Popularity Ranking', description: 'Ranks results based on popularity and user behavior.', learnMoreUrl: 'https://en.wikipedia.org/wiki/PageRank'},
               {value: 'caching', name: 'Query Caching', description: 'Cache query and search results for faster retrieval.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Cache_(computing)'},
               {value: 'ai_assist', name: 'AI-Assisted Search', description: 'Include AI analysis and summary of search results.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Artificial_intelligence_in_computer-aided_technologies'},
-              {value: 'typeahead', name: 'Typeahead Support', description: 'Enable search suggestions as you type.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Autocomplete'}
+              {value: 'autocomplete', name: 'Autocomplete Support', description: 'Enable search suggestions as you type.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Autocomplete'}
             ]
           }
         },
 
         init() {
           this.$watch('selectedMethods', (value) => this.handleMethodChange(value), {deep: true});
+          this.autocompleteEnabled = this.selectedMethods.additionalOptions.includes('autocomplete');
         },
 
         handleMethodChange(vaue) {
           this.isSingleMode = this.selectedMethods.aggregationMethods === 'single';
-          this.typeaheadEnabled = this.selectedMethods.additionalOptions.includes('typeahead');
+          this.autocompleteEnabled = this.selectedMethods.additionalOptions.includes('autocomplete');
 
           if (this.isSingleMode) {
             const allMethods = [...this.selectedMethods.semanticMethods, ...this.selectedMethods.syntacticMethods,];
@@ -247,28 +251,28 @@
 
         handleBlur() {
           setTimeout(() => {
-            this.typeaheadSuggestions = [];
+            this.autocompleteSuggestions = [];
           }, 150);
         },
 
-        async handleTypeahead() {
-          if (!this.typeaheadEnabled || this.query.length < 2) {
-            this.typeaheadSuggestions = [];
+        async handleAutocomplete() {
+          if (!this.autocompleteEnabled || this.query.length < 2) {
+            this.autocompleteSuggestions = [];
             return;
           }
 
           try {
-            const response = await fetch(`/typeahead?q=${encodeURIComponent(this.query)}`);
-            this.typeaheadSuggestions = await response.json();
+            const response = await fetch(`/autocomplete?q=${encodeURIComponent(this.query)}`);
+            this.autocompleteSuggestions = await response.json();
           } catch (error) {
-            console.error('Typeahead error:', error);
-            this.typeaheadSuggestions = [];
+            console.error('Autocomplete error:', error);
+            this.autocompleteSuggestions = [];
           }
         },
 
-        selectTypeaheadSuggestion(suggestion) {
+        selectAutocompleteSuggestion(suggestion) {
           this.query = suggestion;
-          this.typeaheadSuggestions = [];
+          this.autocompleteSuggestions = [];
         },
 
         async performSearch() {
