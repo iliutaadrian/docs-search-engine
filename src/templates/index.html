@@ -60,7 +60,7 @@
         <div class="relative mb-4">
           <input type="text" id="searchInput" x-model="query" placeholder="Search documentation"
             :class="{'typeahead-active': typeaheadEnabled}" @input="handleTypeahead" @blur="handleBlur"
-            class="w-full py-3 px-4 pr-12 text-lg bg-gray-700 border border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-100 placeholder-gray-400">
+            class="w-full py-3 px-4 pr-12 text-lg bg-gray-700 border border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-100 placeholder-gray-400" autocomplete="off">
           <button type="submit"
             class="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
             Search
@@ -174,7 +174,7 @@
           aggregationMethods: 'single',
           syntacticMethods: ['fulltext'],
           semanticMethods: [],
-          additionalOptions: []
+          additionalOptions: ["ai_assist", 'caching']
         },
         typeaheadEnabled: false,
         typeaheadSuggestions: [],
@@ -211,7 +211,7 @@
             methods: [
               {value: 'single', name: 'Single Search', description: 'Default search method combining multiple techniques for optimal results.'},
               {value: 'linear', name: 'Linear Combination', description: 'Combines scores from multiple methods using weighted averages.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Ensemble_learning'},
-              {value: 'rrf', name: 'Reciprocal Rank Fusion', description: 'Combines rankings from multiple search methods.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Rank_aggregation'},
+              {value: 'rank_fusion', name: 'Reciprocal Rank Fusion', description: 'Combines rankings from multiple search methods.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Rank_aggregation'},
               {value: 'cascade', name: 'Cascade Search', description: 'Applies methods sequentially, using each to filter or re-rank results.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Enterprise_search'}
             ]
           },
@@ -298,7 +298,7 @@
               this.aiResponse = data.ai_response;
               this.searchResults = data.search_results;
             } else {
-              this.searchResults = data;
+              this.searchResults = data.search_results;
             }
 
             this.searchResults.forEach(result => result.showFullContent = false);
