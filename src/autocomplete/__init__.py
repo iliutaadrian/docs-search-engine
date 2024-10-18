@@ -63,41 +63,27 @@ def clean_text(text):
     # Remove links
     text = re.sub(r'https?://\S+|www\.\S+', '', text)
     
-   # Split into words, keeping special characters within words
-    words = re.findall(r'\S+', text)
+    # Replace all non-alphanumeric characters (except spaces) with spaces
+    text = re.sub(r'[^a-z0-9\s]', ' ', text)
     
-    # Filter words
+    # Replace multiple spaces with a single space
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Split into words
+    words = text.split()
+    
+    # Filter and process words
     cleaned_words = []
     for word in words:
-        # Remove numbers
-        word = re.sub(r'\d', '', word)
-        
+
         # Remove prefix and suffix of special characters
-        word = re.sub(r'^[^a-z]+|[^a-z]+$', '', word)
+        word = re.sub(r'^[^a-z0-9]+|[^a-z0-9]+$', '', word)
         
-        # Keep words with 2 or more characters, or single alphanumeric characters
-        if len(word) >= 2 or (len(word) == 1 and word.isalnum()):
-            # Keep dots, hyphens, underscores, and forward slashes
-            word = ''.join(char for char in word if char.isalnum() or char in '.-_/#')
-            if word:
-                cleaned_words.append(word)
-    
-    # Remove stop words
-    cleaned_words = [word for word in cleaned_words if word not in STOP_WORDS]
+        # Keep words with 2 or more characters, not in STOP_WORDS, and not consisting only of digits
+        if len(word) >= 2 and word not in STOP_WORDS and not word.isdigit():
+            cleaned_words.append(word)
     
     return ' '.join(cleaned_words)
-
-def is_quality_phrase(phrase):
-    words = phrase.split()
-    if len(words) > MAX_PHRASE_LENGTH or len(words) < 1:
-        return False
-
-    # Check if all words are unique
-    if len(set(words)) != len(words):
-        return False
-    
-    return True
-
 
 def consolidate_phrases(phrases):
     if not phrases:
@@ -105,14 +91,13 @@ def consolidate_phrases(phrases):
 
     phrase_dict = defaultdict(lambda: {'tfidf_score': 0})
     for phrase, tfidf in phrases:
-        base_phrase = ' '.join(sorted(phrase.split()))
-        phrase_dict[base_phrase]['tfidf_score'] = max(phrase_dict[base_phrase]['tfidf_score'], tfidf)
+        # Use the original phrase as the key, preserving word order
+        phrase_dict[phrase]['tfidf_score'] = max(phrase_dict[phrase]['tfidf_score'], tfidf)
     
     # Convert the dictionary to a list of tuples
     consolidated = [(phrase, data['tfidf_score']) for phrase, data in phrase_dict.items()]
     
     return consolidated
-    
 
 def add_or_update_items(items):
     if not items:
@@ -145,29 +130,16 @@ def populate_autocomplete_from_documents(documents):
         cleaned_content = clean_text(doc['content'])
         words = cleaned_content.split()
         
-        print(f"Document {doc_index + 1} - Number of words after cleaning: {len(words)}")
-        print(f"Document {doc_index + 1} - First 10 words: {words[:20]}")
-        
         for i in range(len(words)):
             for j in range(i + 1, min(i + MAX_PHRASE_LENGTH + 1, len(words) + 1)):
                 phrase = ' '.join(words[i:j])
-                if is_quality_phrase(phrase):
-                    phrase_words = [word for word in phrase.split() if word in vectorizer.vocabulary_]
-                    if phrase_words:
-                        tfidf_scores = [tfidf_matrix[doc_index, vectorizer.vocabulary_[word]] for word in phrase_words]
-                        tfidf_score = np.max(tfidf_scores)
-                        phrases.append((phrase, tfidf_score))
-                    else:
-                        continue
-                        print(f"Phrase '{phrase}' contains no words in the vocabulary. Skipping.")
-    
-    print(f"Total number of phrases found: {len(phrases)}")
-    print(f"Sample phrases (first 5): {phrases[:5]}")
+                phrase_words = [word for word in phrase.split() if word in vectorizer.vocabulary_]
+                if phrase_words:
+                    tfidf_scores = [tfidf_matrix[doc_index, vectorizer.vocabulary_[word]] for word in phrase_words]
+                    tfidf_score = np.max(tfidf_scores)
+                    phrases.append((phrase, tfidf_score))
 
     consolidated_phrases = consolidate_phrases(phrases)
-    print(f"Number of consolidated phrases: {len(consolidated_phrases)}")
-    print(f"Sample consolidated phrases (first 5): {consolidated_phrases[:5]}")
-
     add_or_update_items(consolidated_phrases)
     
     quality_words = []
@@ -175,20 +147,16 @@ def populate_autocomplete_from_documents(documents):
         top_tfidf_features = tfidf_matrix[doc_index].tocoo()
         top_words = [feature_names[i] for i in top_tfidf_features.col[top_tfidf_features.data.argsort()[-TOP_TFIDF_WORDS:]]]
         for word in top_words:
-            if is_quality_phrase(word) and word in vectorizer.vocabulary_:
+            if word in vectorizer.vocabulary_:
                 tfidf_score = tfidf_matrix[doc_index, vectorizer.vocabulary_[word]]
                 quality_words.append((word, tfidf_score))
-    
-    print(f"Total number of quality words: {len(quality_words)}")
-    print(f"Sample quality words (first 5): {quality_words[:5]}")
 
     if quality_words:
         consolidated_words = consolidate_phrases(quality_words)
-        print(f"Number of consolidated quality words: {len(consolidated_words)}")
-        print(f"Sample consolidated quality words (first 5): {consolidated_words[:5]}")
         add_or_update_items(consolidated_words)
     else:
         print("No quality words found.")
+
 
 def update_click_count(phrase):
     conn = get_db_connection()
