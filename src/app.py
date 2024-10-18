@@ -10,7 +10,7 @@ from document_processor import init_processor
 from config.config import DOCS_FOLDER
 import json
 
-from autocomplete import init_autocomplete, get_autocomplete_suggestions
+from autocomplete import init_autocomplete, get_autocomplete_suggestions, update_click_count
 
 app = Flask(__name__)
 
@@ -30,6 +30,8 @@ def search():
 
     if not query:
         return jsonify({"error": "No query provided"}), 400
+
+    update_click_count(query)
 
     search_methods = syntactic_methods + semantic_methods
 
@@ -59,6 +61,7 @@ def search():
 
 @app.route('/autocomplete', methods=['GET'])
 def autocomplete():
+    print(request.args)
     query = request.args.get('q', '')
     if not query:
         return jsonify([])
@@ -66,6 +69,15 @@ def autocomplete():
     suggestions = get_autocomplete_suggestions(query)
     return jsonify(suggestions)
 
+@app.route('/update_click_count', methods=['POST'])
+def update_click():
+    data = request.json
+    phrase = data.get('phrase')
+    if not phrase:
+        return jsonify({"error": "No phrase provided"}), 400
+    
+    update_click_count(phrase)
+    return jsonify({"success": True, "message": "Click count updated"})
 
 def apply_popularity_ranking(results):
     # This is a placeholder function. In a real-world scenario, you would implement
@@ -80,14 +92,14 @@ if __name__ == '__main__':
 
     # print("\nInitializing search module", flush=True)
     # init_search_module(documents)
-    # 
-    print("\nInitializing cache module", flush=True)
-    init_cache_module()
+
+    # print("\nInitializing cache module", flush=True)
+    # init_cache_module()
 
     print("\nInitializing autocomplete module", flush=True)
     init_autocomplete(documents)
 
-    print("\nInitializing LLM module", flush=True)
-    init_llm()
-    
+    # print("\nInitializing LLM module", flush=True)
+    # init_llm()
+
     app.run(debug=True, host='0.0.0.0')

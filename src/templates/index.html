@@ -138,14 +138,14 @@
             <template x-for="(result, index) in searchResults" :key="index">
               <div class="bg-gray-800 p-4 rounded-lg shadow mb-4">
                 <div class="mb-2">
-                  <h3 class="text-lg font-semibold text-gray-100" x-html="result.highlighted_path.replace('/app/docs', '')">
+                  <h3 class="text-lg font-semibold text-gray-100"
+                    x-html="result.highlighted_path.replace('/app/docs', '')">
                   </h3>
                   <p class="text-sm text-blue-400 mt-1">Occurrences: <span x-text="result.occurrence_count"></span></p>
                 </div>
                 <div class="border-t border-gray-700 pt-2">
                   <div class="overflow-auto max-h-40">
-                    <pre class="text-xs text-gray-200 whitespace-pre-wrap"
-                      x-html="result.content_snippet"></pre>
+                    <pre class="text-xs text-gray-200 whitespace-pre-wrap" x-html="result.content_snippet"></pre>
                   </div>
                   <p class="text-sm text-gray-400 mt-2">Content length: <span x-text="result.content_length"></span></p>
                 </div>
@@ -224,7 +224,7 @@
               {value: 'popularity_rank', name: 'Popularity Ranking', description: 'Ranks results based on popularity and user behavior.', learnMoreUrl: 'https://en.wikipedia.org/wiki/PageRank'},
               {value: 'caching', name: 'Query Caching', description: 'Cache query and search results for faster retrieval.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Cache_(computing)'},
               {value: 'ai_assist', name: 'AI-Assisted Search', description: 'Include AI analysis and summary of search results.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Artificial_intelligence_in_computer-aided_technologies'},
-              {value: 'autocomplete', name: 'Autocomplete Support', description: 'Enable search suggestions as you type.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Autocomplete'}
+              {value: 'autocomplete', name: 'Autocomplete Support', description: 'TF-IDF, user queries, ', learnMoreUrl: 'https://en.wikipedia.org/wiki/Autocomplete'}
             ]
           }
         },
@@ -272,6 +272,25 @@
         selectAutocompleteSuggestion(suggestion) {
           this.query = suggestion;
           this.autocompleteSuggestions = [];
+          this.updateClickCount(suggestion);
+        },
+
+        async updateClickCount(phrase) {
+          try {
+            const response = await fetch('/update_click_count', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({phrase: phrase}),
+            });
+            const data = await response.json();
+            if (!data.success) {
+              console.error('Failed to update click count:', data.message);
+            }
+          } catch (error) {
+            console.error('Error updating click count:', error);
+          }
         },
 
         async performSearch() {

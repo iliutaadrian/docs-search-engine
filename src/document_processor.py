@@ -20,12 +20,19 @@ def init_db():
     print(f"Database initialized at {DB_PATH}")
 
 def clean_text(text):
+    # Remove HTML tags using BeautifulSoup
+    soup = BeautifulSoup(text, 'html.parser')
+    text = soup.get_text()
+    
     # Remove extra whitespace
     text = re.sub(r'\s+', ' ', text)
-    # Remove special characters except periods and commas
-    text = re.sub(r'[^\w\s.,]', '', text)
+    
     # Convert to lowercase
     text = text.lower()
+    
+    # Remove special characters except periods, commas, and other punctuation
+    text = re.sub(r'[^\w\s,/;:!?-]', '', text)
+    
     return text.strip()
 
 def extract_content(file_path):
