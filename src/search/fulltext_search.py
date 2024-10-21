@@ -7,7 +7,7 @@ def init(documents):
     pass
 
 def prepare_fts_query(query):
-    clean_query = '" OR "'.join(query.split())
+    clean_query = '" AND "'.join(query.split())
     return '"' + clean_query + '"'
 
 def search(query):
@@ -17,7 +17,7 @@ def search(query):
     c.execute("""
         SELECT 
             path, 
-            highlight(documents, 0, '<mark>', '</mark>') AS highlighted_path,
+            highlight(documents, 1, '<mark>', '</mark>') AS highlighted_name,
             snippet(documents, 2, '<mark>', '</mark>', '...', 10) AS content_snippet,
             content,
             original_content,
@@ -33,11 +33,11 @@ def search(query):
     
     final_results = []
     for result in results:
-        path, highlighted_path, content_snippet, content, original_content, highlighted_content, content_length = result
+        path, highlighted_name, content_snippet, content, original_content, highlighted_content, content_length = result
         occurrence_count = highlighted_content.count('<mark>')
         final_results.append({
             "path": path,
-            "highlighted_path": highlighted_path,
+            "highlighted_name": highlighted_name,
             "content_snippet": content_snippet,
             "content": content,
             "original_content": original_content,

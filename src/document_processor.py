@@ -5,12 +5,14 @@ from PyPDF2 import PdfReader
 import re
 from bs4 import BeautifulSoup
 from config.config import DB_PATH, DOCS_FOLDER
+from docx import Document 
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''CREATE VIRTUAL TABLE IF NOT EXISTS documents USING fts5(
-                 path,
+                 path UNINDEXED,
+                 name,
                  content,
                  original_content,
                  last_modified UNINDEXED
@@ -60,7 +62,19 @@ def extract_content(file_path):
             soup = BeautifulSoup(f, 'html.parser')
             content = soup.get_text()
     
+    elif file_path.endswith('.docx'):  
+        doc = Document(file_path)
+        content = ' '.join([paragraph.text for paragraph in doc.paragraphs])
+    
     return content
+
+
+def extract_doc_name(path):
+    file_name = os.path.basename(path)
+    file_name = os.path.splitext(file_name)[0]
+    # rules for extracting doc name
+    file_name = file_name.replace('[TMS][REPORT]', '').replace('[TMS][Report]', '')
+    return file_name.strip()
 
 def index_documents():
     conn = sqlite3.connect(DB_PATH)
@@ -69,7 +83,7 @@ def index_documents():
     
     for root, _, files in os.walk(DOCS_FOLDER):
         for file in files:
-            if file.endswith(('.md', '.pdf', '.txt', '.html')):
+            if file.endswith(('.md', '.pdf', '.txt', '.html', '.docx')): 
                 file_path = os.path.join(root, file)
                 last_modified = os.path.getmtime(file_path)
                 
@@ -79,11 +93,13 @@ def index_documents():
                 if not result or result[0] < last_modified:
                     original_content = extract_content(file_path)
                     optimized_content = clean_text(original_content)
+                    name = extract_doc_name(file_path)
+                    path = file_path.replace(DOCS_FOLDER, '')
                     
                     c.execute("""INSERT OR REPLACE INTO documents 
-                                 (path, content, original_content, last_modified) 
-                                 VALUES (?, ?, ?, ?)""",
-                              (file_path, optimized_content, original_content, last_modified))
+                                 (path, name, content, original_content, last_modified) 
+                                 VALUES (?, ?, ?, ?, ?)""",
+                              (file_path, name, optimized_content, original_content, last_modified))
                     
                     indexed_count += 1
                     print(f"Indexed: {file_path}")
@@ -97,9 +113,9 @@ def index_documents():
 def get_all_documents():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT path, content, original_content FROM documents")
-    documents = [{"path": path, "content": opt_content, "original_content": orig_content} 
-                 for path, opt_content, orig_content in c.fetchall()]
+    c.execute("SELECT path, name, content, original_content FROM documents")
+    documents = [{"path": path, "name": name, "content": opt_content, "original_content": orig_content} 
+                 for path, name, opt_content, orig_content in c.fetchall()]
     conn.close()
     print(f"Fetched {len(documents)} documents from the database")
     return documents

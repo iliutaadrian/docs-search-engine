@@ -11,6 +11,13 @@ MAX_PHRASE_LENGTH = 5
 BATCH_SIZE = 1000
 TOP_TFIDF_WORDS = 20
 
+
+# Weights for the ranking formula
+TFIDF_WEIGHT = 0.3
+CLICK_COUNT_WEIGHT = 0.3
+DOC_NAME_WEIGHT = 0.4
+
+
 STOP_WORDS = set([
     'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', 'aren\'t', 'as', 'at',
     'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by',
@@ -32,6 +39,7 @@ STOP_WORDS = set([
     'you', 'you\'d', 'you\'ll', 'you\'re', 'you\'ve', 'your', 'yours', 'yourself', 'yourselves'
 ])
 
+
 def get_db_connection():
     conn = sqlite3.connect(AUTOCOMPLETE_DB_PATH)
     conn.execute("PRAGMA journal_mode=WAL")
@@ -46,7 +54,8 @@ def init_autocomplete(documents):
             id INTEGER PRIMARY KEY,
             phrase TEXT UNIQUE,
             tfidf_score REAL,
-            click_count INTEGER DEFAULT 0
+            click_count INTEGER DEFAULT 0,
+            is_doc_name BOOLEAN DEFAULT 0
         );
         CREATE INDEX IF NOT EXISTS idx_autocomplete_items_phrase ON autocomplete_items(phrase);
     ''')
@@ -55,6 +64,7 @@ def init_autocomplete(documents):
     conn.close()
     
     populate_autocomplete_from_documents(documents)
+
 
 def clean_text(text):
     # Convert to lowercase
@@ -99,7 +109,7 @@ def consolidate_phrases(phrases):
     
     return consolidated
 
-def add_or_update_items(items):
+def add_or_update_items(items, is_doc_name=False):
     if not items:
         return
 
@@ -108,17 +118,20 @@ def add_or_update_items(items):
     
     for item, tfidf_score in items:
         cursor.execute('''
-            INSERT INTO autocomplete_items (phrase, tfidf_score)
-            VALUES (?, ?)
+            INSERT INTO autocomplete_items (phrase, tfidf_score, is_doc_name)
+            VALUES (?, ?, ?)
             ON CONFLICT(phrase) DO UPDATE SET 
-                tfidf_score = MAX(tfidf_score, ?)
-        ''', (item, tfidf_score, tfidf_score))
+                tfidf_score = MAX(tfidf_score, ?),
+                is_doc_name = ?
+        ''', (item, tfidf_score, is_doc_name, tfidf_score, is_doc_name))
     
     conn.commit()
     conn.close()
 
+
 def populate_autocomplete_from_documents(documents):
     phrases = []
+    doc_names = []
     
     vectorizer = TfidfVectorizer(stop_words=list(STOP_WORDS), token_pattern=r'\b\w+\b')
     corpus = [clean_text(doc['content']) for doc in documents]
@@ -139,8 +152,15 @@ def populate_autocomplete_from_documents(documents):
                     tfidf_score = np.max(tfidf_scores)
                     phrases.append((phrase, tfidf_score))
 
+        doc_name = doc['name']
+        if doc_name:
+            doc_names.append((doc_name, 1.0))  
+
+
     consolidated_phrases = consolidate_phrases(phrases)
     add_or_update_items(consolidated_phrases)
+
+    add_or_update_items(doc_names, is_doc_name=True)
     
     quality_words = []
     for doc_index, doc in enumerate(documents):
@@ -176,12 +196,15 @@ def get_autocomplete_suggestions(query, limit=10):
     cursor = conn.cursor()
     
     cursor.execute('''
-        SELECT phrase, (tfidf_score * 0.3 + (CAST(click_count AS REAL) / (SELECT MAX(click_count) FROM autocomplete_items)) * 0.7) AS combined_score
+        SELECT phrase,
+               (? * tfidf_score + 
+                ? * (CAST(click_count AS REAL) / (SELECT MAX(click_count) FROM autocomplete_items)) + 
+                ? * CAST(is_doc_name AS REAL)) AS combined_score
         FROM autocomplete_items
         WHERE phrase LIKE ? || '%'
         ORDER BY combined_score DESC, length(phrase) ASC
         LIMIT ?
-    ''', (query.lower(), limit))
+    ''', (TFIDF_WEIGHT, CLICK_COUNT_WEIGHT, DOC_NAME_WEIGHT, query.lower(), limit))
     
     suggestions = [row[0] for row in cursor.fetchall()]
     
