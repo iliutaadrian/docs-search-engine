@@ -4,6 +4,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from config.config import DATA_FOLDER
+from search.syntactic_helper import find_snippet, highlight_terms
 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
 documents = None
@@ -30,7 +31,7 @@ def init(docs):
 def create_new_index(docs):
     print("Processing documents for OpenAI embeddings...")
     langchain_docs = [
-        Document(page_content=doc['content'], metadata={"path": doc['path']})
+        Document(page_content=doc['content'], metadata={"path": doc['path'], "name": doc['name']})
         for doc in docs
     ]
     
@@ -55,28 +56,46 @@ def search(query, k=5):
     if vector_store is None:
         raise ValueError("OpenAI embeddings vector store not initialized. Call init() first.")
     
-    results = vector_store.similarity_search_with_score(query, k=k)
+    # Perform semantic search using OpenAI embeddings
+    semantic_results = vector_store.similarity_search_with_score(query, k=k*2)  # Fetch more results initially
     
-    processed_results = []
-    for doc, score in results:
-        full_content = doc.page_content
-        content_length = len(full_content)
-        content_snippet = full_content[:100] + "..." if len(full_content) > 100 else full_content
-        highlighted_content = full_content
-        for term in query.split():
-            highlighted_content = highlighted_content.replace(term, f"<b>{term}</b>")
-        occurrence_count = sum(full_content.lower().count(term.lower()) for term in query.split())
+    unique_results = {}
+    for doc, score in semantic_results:
+        # Find the corresponding document in the global documents list
+        global_doc = next((d for d in documents if d['path'] == doc.metadata["path"]), None)
         
-        processed_results.append({
-            "path": doc.metadata["path"],
-            "name": os.path.basename(doc.metadata["path"]),
-            "content_snippet": content_snippet,
-            "content_length": content_length,
-            "full_content": full_content,
-            "highlighted_content": highlighted_content,
-            "occurrence_count": occurrence_count,
-            "similarity_score": 1 - score  # FAISS returns distance, so we convert it to similarity
-        })
+        if global_doc:
+            content = global_doc['content']
+            original_content = global_doc['original_content']
+            content_length = len(original_content)
+            
+            content_snippet = find_snippet(content, query)
+            
+            highlighted_content = highlight_terms(original_content, query)
+            highlighted_name = highlight_terms(global_doc['name'], query)
+            
+            relevance_score = 1 - score              
+
+            result = {
+                "path": global_doc['path'],
+                "highlighted_name": highlighted_name,
+                "content_snippet": content_snippet,
+                "content": content,
+                "original_content": original_content,
+                "highlighted_content": highlighted_content,
+                "content_length": content_length,
+                "relevance_score": relevance_score,
+            }
+            
+            # Keep only the most relevant result for each unique file path
+            if global_doc['path'] not in unique_results or relevance_score > unique_results[global_doc['path']]['relevance_score']:
+                unique_results[global_doc['path']] = result
+
+    # Convert the dictionary to a list and sort by relevance score
+    results = list(unique_results.values())
+    results.sort(key=lambda x: x['relevance_score'], reverse=True)
     
-    print(f"Returned {len(processed_results)} processed results from OpenAI embeddings search.")
-    return processed_results
+    # Trim to the requested number of results
+    results = results[:k]
+    
+    return results

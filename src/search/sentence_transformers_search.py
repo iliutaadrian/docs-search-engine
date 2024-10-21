@@ -3,6 +3,7 @@ import numpy as np
 import faiss
 from sentence_transformers import SentenceTransformer
 from config.config import DATA_FOLDER
+from search.syntactic_helper import find_snippet, highlight_terms
 
 model = None
 documents = None
@@ -51,31 +52,45 @@ def search(query, k=5):
     print(f"Performing similarity search with Sentence Transformer for query: '{query}'")
     query_embedding = model.encode([query]).astype('float32')
     
-    print(f"Searching for top {k} similar documents...")
-    distances, indices = faiss_index.search(query_embedding, k)
+    print(f"Searching for top {k*2} similar documents...")  # Search for more results initially
+    distances, indices = faiss_index.search(query_embedding, k*2)
     
-    print(f"Processing top {k} results from Sentence Transformer similarity search...")
-    results = []
+    print(f"Processing top {k*2} results from Sentence Transformer similarity search...")
+    unique_results = {}
     for i, idx in enumerate(indices[0]):
         doc = documents[idx]
-        full_content = doc['content']
-        content_length = len(full_content)
-        content_snippet = full_content[:100] + "..." if len(full_content) > 100 else full_content
-        highlighted_content = full_content
-        for term in query.split():
-            highlighted_content = highlighted_content.replace(term, f"<b>{term}</b>")
-        occurrence_count = sum(full_content.lower().count(term.lower()) for term in query.split())
+        content = doc['content']
+        original_content = doc['original_content']
+        content_length = len(original_content)
         
-        results.append({
-            "path": doc["path"],
-            "name": os.path.basename(doc["path"]),
+        # Find the content snippet where the term appears
+        content_snippet = find_snippet(content, query)
+        
+        highlighted_content = highlight_terms(original_content, query)
+        highlighted_name = highlight_terms(doc['name'], query)
+        
+        similarity_score = float(distances[0][i])
+        
+        result = {
+            "path": doc['path'],
+            "highlighted_name": highlighted_name,
             "content_snippet": content_snippet,
-            "content_length": content_length,
-            "full_content": full_content,
+            "content": content,
+            "original_content": original_content,
             "highlighted_content": highlighted_content,
-            "occurrence_count": occurrence_count,
-            "similarity_score": float(distances[0][i])  # FAISS returns similarity, not distance for IP index
-        })
+            "content_length": content_length,
+            "relevance_score": similarity_score,
+        }
+        
+        # Keep only the most relevant result for each unique file path
+        if doc['path'] not in unique_results or similarity_score > unique_results[doc['path']]['relevance_score']:
+            unique_results[doc['path']] = result
+
+    # Convert the dictionary to a list and sort by relevance score
+    results = list(unique_results.values())
+    results.sort(key=lambda x: x['relevance_score'], reverse=True)
     
-    print(f"Returned {len(results)} processed results from Sentence Transformer search.")
+    # Trim to the requested number of results
+    results = results[:k]
+    
     return results

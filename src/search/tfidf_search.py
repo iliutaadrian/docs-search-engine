@@ -5,7 +5,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from config.config import DATA_FOLDER
 import re
 
-from search.syntactic_helper import find_snippet, highlight_terms
+from search.syntactic_helper import clear_text, find_snippet, highlight_terms
 
 documents = None
 tfidf_vectorizer = None
@@ -43,6 +43,7 @@ def search(query, k=5):
     if faiss_index is None or tfidf_vectorizer is None:
         raise ValueError("TF-IDF FAISS search not initialized. Call init() first.")
     
+    query = clear_text(query)
     query_vector = tfidf_vectorizer.transform([query]).toarray().astype('float32')
     
     # Perform the search
