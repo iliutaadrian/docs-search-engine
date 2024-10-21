@@ -25,7 +25,6 @@ def search(query):
             length(original_content) AS content_length
         FROM documents 
         WHERE documents MATCH ?
-        ORDER BY rank
     """, (prepare_fts_query(query),))
     
     results = c.fetchall()
@@ -43,8 +42,8 @@ def search(query):
             "original_content": original_content,
             "highlighted_content": highlighted_content,
             "content_length": content_length,
-            "occurrence_count": occurrence_count
+            "relevance_score": occurrence_count
         })
     
-    final_results.sort(key=lambda x: x['occurrence_count'], reverse=True)
+    final_results.sort(key=lambda x: x['relevance_score'], reverse=True)
     return final_results

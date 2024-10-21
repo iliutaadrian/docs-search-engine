@@ -90,8 +90,8 @@ if __name__ == '__main__':
     print("\nInitializing documents", flush=True)
     documents = init_processor()
 
-    # print("\nInitializing search module", flush=True)
-    # init_search_module(documents)
+    print("\nInitializing search module", flush=True)
+    init_search_module(documents)
 
     # print("\nInitializing cache module", flush=True)
     # init_cache_module()

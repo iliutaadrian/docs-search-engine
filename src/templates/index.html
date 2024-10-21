@@ -141,7 +141,7 @@
                   <h3 class="text-lg font-semibold text-gray-100"
                     x-html="result.highlighted_name">
                   </h3>
-                  <p class="text-sm text-blue-400 mt-1">Occurrences: <span x-text="result.occurrence_count"></span></p>
+                  <p class="text-sm text-blue-400 mt-1">Releance Score: <span x-text="result.relevance_score"></span></p>
                 </div>
                 <div class="border-t border-gray-700 pt-2">
                   <div class="overflow-auto max-h-40">
@@ -174,7 +174,7 @@
         searchedQuery: '',
         selectedMethods: {
           aggregationMethods: 'single',
-          syntacticMethods: ['fulltext'],
+          syntacticMethods: ['tfidf'],
           semanticMethods: [],
           additionalOptions: ["autocomplete"]
         },

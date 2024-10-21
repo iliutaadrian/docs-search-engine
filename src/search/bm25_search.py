@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import faiss
+import re
 from rank_bm25 import BM25Okapi
 from sklearn.feature_extraction.text import CountVectorizer
 from config.config import DATA_FOLDER
@@ -9,16 +10,21 @@ documents = None
 bm25 = None
 faiss_index = None
 document_paths = None
+document_names = None
 FAISS_INDEX_PATH = os.path.join(DATA_FOLDER, "faiss_bm25_index")
 
 def init(docs):
-    global documents, bm25, faiss_index, document_paths
+    global documents, bm25, faiss_index, document_paths, document_names
 
     documents = [doc['content'] for doc in docs]
     document_paths = [doc['path'] for doc in docs]
+    document_names = [doc['name'] for doc in docs]
+    
+    # Combine document content with its name for BM25 calculation
+    combined_docs = [f"{name} {content}" for name, content in zip(document_names, documents)]
     
     # Tokenize the documents
-    tokenized_docs = [doc.split() for doc in documents]
+    tokenized_docs = [doc.split() for doc in combined_docs]
     
     # Create BM25 object
     bm25 = BM25Okapi(tokenized_docs)
@@ -36,24 +42,10 @@ def init(docs):
     
     print(f"BM25 FAISS search initialized with {len(documents)} documents.")
 
-def load_index():
-    global faiss_index
-    if os.path.exists(FAISS_INDEX_PATH):
-        print("Loading existing FAISS index...")
-        try:
-            faiss_index = faiss.read_index(FAISS_INDEX_PATH)
-            print(f"Loaded FAISS index with {faiss_index.ntotal} vectors.")
-        except Exception as e:
-            print(f"Error loading existing index: {e}")
-            print("Creating new FAISS index...")
-            init(documents)
-    else:
-        print("Creating new FAISS index...")
-        init(documents)
 
 def search(query, k=5):
     if faiss_index is None or bm25 is None:
-        raise ValueError("BM25 FAISS search not initialized. Call init() or load_index() first.")
+        raise ValueError("BM25 FAISS search not initialized. Call init() first.")
     
     # Tokenize the query
     tokenized_query = query.split()
@@ -70,17 +62,18 @@ def search(query, k=5):
         content_length = len(full_content)
         content_snippet = full_content[:100] + "..." if len(full_content) > 100 else full_content
         highlighted_content = highlight_terms(full_content, query)
-        occurrence_count = sum(full_content.lower().count(term.lower()) for term in tokenized_query)
+        highlighted_name = highlight_terms(document_names[idx], query)
+        
+        relevance_score = float(scores[0][i])
         
         results.append({
             "path": document_paths[idx],
-            "name": os.path.basename(document_paths[idx]),
+            "highlighted_name": highlighted_name,
             "content_snippet": content_snippet,
             "content_length": content_length,
             "full_content": full_content,
             "highlighted_content": highlighted_content,
-            "occurrence_count": occurrence_count,
-            "similarity_score": float(scores[0][i])  # Convert from numpy.float32 to Python float
+            "relevance_score": relevance_score,
         })
     
     return results
@@ -88,5 +81,10 @@ def search(query, k=5):
 def highlight_terms(text, query):
     highlighted = text
     for term in query.split():
-        highlighted = highlighted.replace(term, f"<b>{term}</b>")
+        # Create a regular expression pattern for case-insensitive matching
+        pattern = re.compile(re.escape(term), re.IGNORECASE)
+        
+        # Use the pattern to replace all occurrences with the highlighted version
+        highlighted = pattern.sub(lambda m: f"<mark>{m.group()}</mark>", highlighted)
+    
     return highlighted

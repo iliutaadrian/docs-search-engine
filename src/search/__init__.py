@@ -8,8 +8,8 @@ from .hybrid_search import search as hybrid_search
 
 def init_search_module(documents):
     init_fulltext(documents)
-    # init_tfidf(documents)
-    # init_bm25(documents)
+    init_tfidf(documents)
+    init_bm25(documents)
     # init_openai(documents)
     # init_bert(documents)
     # init_sentence_transformers(documents)
