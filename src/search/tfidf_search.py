@@ -5,6 +5,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from config.config import DATA_FOLDER
 import re
 
+from search.syntactic_helper import find_snippet, highlight_terms
 
 documents = None
 tfidf_vectorizer = None
@@ -15,12 +16,12 @@ FAISS_INDEX_PATH = os.path.join(DATA_FOLDER, "faiss_tfidf_index")
 
 def init(docs):
     global documents, tfidf_vectorizer, faiss_index, document_paths, document_names
-    documents = [doc['content'] for doc in docs]
+    documents = docs 
     document_paths = [doc['path'] for doc in docs]
     document_names = [doc['name'] for doc in docs]
     
     # Combine document content with its name for TF-IDF vectorization
-    combined_docs = [f"{name} {content}" for name, content in zip(document_names, documents)]
+    combined_docs = [f"{doc['name']} {doc['content']}" for doc in docs]
     
     tfidf_vectorizer = TfidfVectorizer(stop_words='english')
     tfidf_matrix = tfidf_vectorizer.fit_transform(combined_docs)
@@ -38,7 +39,6 @@ def init(docs):
     
     print(f"TF-IDF FAISS search initialized with {len(documents)} documents.")
 
-
 def search(query, k=5):
     if faiss_index is None or tfidf_vectorizer is None:
         raise ValueError("TF-IDF FAISS search not initialized. Call init() first.")
@@ -50,33 +50,28 @@ def search(query, k=5):
     
     results = []
     for i, idx in enumerate(indices[0]):
-        full_content = documents[idx]
-        content_length = len(full_content)
-        content_snippet = full_content[:100] + "..." if len(full_content) > 100 else full_content
-        highlighted_content = highlight_terms(full_content, query)
-        highlighted_name = highlight_terms(document_names[idx], query)
+        doc = documents[idx]
+        content = doc['content']
+        original_content = doc['original_content']
+        content_length = len(original_content)
+        
+        # Find the content snippet where the term appears
+        content_snippet = find_snippet(content, query)
+        
+        highlighted_content = highlight_terms(original_content, query)
+        highlighted_name = highlight_terms(doc['name'], query)
         
         relevance_score = float(scores[0][i])
         
         results.append({
-            "path": document_paths[idx],
+            "path": doc['path'],
             "highlighted_name": highlighted_name,
             "content_snippet": content_snippet,
-            "content_length": content_length,
-            "full_content": full_content,
+            "content": content,
+            "original_content": original_content,
             "highlighted_content": highlighted_content,
+            "content_length": content_length,
             "relevance_score": relevance_score,
         })
     
     return results
-
-def highlight_terms(text, query):
-    highlighted = text
-    for term in query.split():
-        # Create a regular expression pattern for case-insensitive matching
-        pattern = re.compile(re.escape(term), re.IGNORECASE)
-        
-        # Use the pattern to replace all occurrences with the highlighted version
-        highlighted = pattern.sub(lambda m: f"<mark>{m.group()}</mark>", highlighted)
-    
-    return highlighted

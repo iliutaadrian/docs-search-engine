@@ -1,12 +1,13 @@
 import os
 import sqlite3
-import re
 from config.config import DB_PATH
+from search.syntactic_helper import clear_text
 
 def init(documents):
     pass
 
 def prepare_fts_query(query):
+    query = clear_text(query)
     clean_query = '" AND "'.join(query.split())
     return '"' + clean_query + '"'
 
@@ -21,7 +22,7 @@ def search(query):
             snippet(documents, 2, '<mark>', '</mark>', '...', 10) AS content_snippet,
             content,
             original_content,
-            highlight(documents, 2, '<mark>', '</mark>') AS highlighted_content,
+            highlight(documents, 3, '<mark>', '</mark>') AS highlighted_content,
             length(original_content) AS content_length
         FROM documents 
         WHERE documents MATCH ?
@@ -42,7 +43,7 @@ def search(query):
             "original_content": original_content,
             "highlighted_content": highlighted_content,
             "content_length": content_length,
-            "relevance_score": occurrence_count
+            "relevance_score": occurrence_count,
         })
     
     final_results.sort(key=lambda x: x['relevance_score'], reverse=True)

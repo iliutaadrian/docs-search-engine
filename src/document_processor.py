@@ -7,6 +7,9 @@ from bs4 import BeautifulSoup
 from config.config import DB_PATH, DOCS_FOLDER
 from docx import Document 
 
+from search.syntactic_helper import clear_text
+
+
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -21,21 +24,6 @@ def init_db():
     conn.close()
     print(f"Database initialized at {DB_PATH}")
 
-def clean_text(text):
-    # Remove HTML tags using BeautifulSoup
-    soup = BeautifulSoup(text, 'html.parser')
-    text = soup.get_text()
-    
-    # Remove extra whitespace
-    text = re.sub(r'\s+', ' ', text)
-    
-    # Convert to lowercase
-    text = text.lower()
-    
-    # Remove special characters except periods, commas, and other punctuation
-    text = re.sub(r'[^\w\s,/;:!?-]', '', text)
-    
-    return text.strip()
 
 def extract_content(file_path):
     content = ""
@@ -44,7 +32,6 @@ def extract_content(file_path):
         with open(file_path, 'r', encoding='utf-8') as f:
             md_content = f.read()
             html_content = markdown.markdown(md_content)
-            return html_content
             soup = BeautifulSoup(html_content, 'html.parser')
             content = soup.get_text()
     
@@ -92,7 +79,7 @@ def index_documents():
                 
                 if not result or result[0] < last_modified:
                     original_content = extract_content(file_path)
-                    optimized_content = clean_text(original_content)
+                    optimized_content = clear_text(original_content)
                     name = extract_doc_name(file_path)
                     path = file_path.replace(DOCS_FOLDER, '')
                     
@@ -109,6 +96,7 @@ def index_documents():
     conn.commit()
     conn.close()
     print(f"Indexed or updated {indexed_count} documents")
+    return indexed_count
 
 def get_all_documents():
     conn = sqlite3.connect(DB_PATH)
@@ -122,5 +110,5 @@ def get_all_documents():
 
 def init_processor():
     init_db()
-    index_documents()
-    return get_all_documents()
+    indexed_count = index_documents()
+    return indexed_count, get_all_documents()

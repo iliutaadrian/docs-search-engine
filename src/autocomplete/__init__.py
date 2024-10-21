@@ -6,11 +6,16 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from config.config import DATA_FOLDER
 import numpy as np
 
+from search.syntactic_helper import clear_text 
+
 AUTOCOMPLETE_DB_PATH = os.path.join(DATA_FOLDER, 'autocomplete.db')
 MAX_PHRASE_LENGTH = 5
 BATCH_SIZE = 1000
 TOP_TFIDF_WORDS = 20
 
+MIN_TFIDF_THRESHOLD_WORD = 0.01
+MIN_TFIDF_THRESHOLD_PHRASE = 0.02
+MIN_TFIDF_THRESHOLD_DOC_NAME = 0.005
 
 # Weights for the ranking formula
 TFIDF_WEIGHT = 0.3
@@ -19,24 +24,7 @@ DOC_NAME_WEIGHT = 0.4
 
 
 STOP_WORDS = set([
-    'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are', 'aren\'t', 'as', 'at',
-    'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by',
-    'can\'t', 'cannot', 'could', 'couldn\'t',
-    'aren', 'can', 'couldn', 'd', 'didn', 'doesn', 'don', 'hadn', 'hasn', 'haven', 'isn', 'let', 'll', 'm', 'mustn', 're', 's', 'shan', 'shouldn', 't', 've', 'wasn', 'weren', 'won', 'wouldn',
-    'did', 'didn\'t', 'do', 'does', 'doesn\'t', 'doing', 'don\'t', 'down', 'during',
-    'each',
-    'few', 'for', 'from', 'further',
-    'had', 'hadn\'t', 'has', 'hasn\'t', 'have', 'haven\'t', 'having', 'he', 'he\'d', 'he\'ll', 'he\'s', 'her', 'here', 'here\'s', 'hers', 'herself', 'him', 'himself', 'his', 'how', 'how\'s',
-    'i', 'i\'d', 'i\'ll', 'i\'m', 'i\'ve', 'if', 'in', 'into', 'is', 'isn\'t', 'it', 'it\'s', 'its', 'itself',
-    'let\'s', 'link',
-    'me', 'more', 'most', 'mustn\'t', 'my', 'myself',
-    'no', 'nor', 'not',
-    'of', 'off', 'on', 'once', 'only', 'or', 'other', 'ought', 'our', 'ours', 'ourselves', 'out', 'over', 'own',
-    'same', 'shan\'t', 'she', 'she\'d', 'she\'ll', 'she\'s', 'should', 'shouldn\'t', 'so', 'some', 'such',
-    'than', 'that', 'that\'s', 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there', 'there\'s', 'these', 'they', 'they\'d', 'they\'ll', 'they\'re', 'they\'ve', 'this', 'those', 'through', 'to', 'too',
-    'under', 'until', 'up', 'very',
-    'was', 'wasn\'t', 'we', 'we\'d', 'we\'ll', 'we\'re', 'we\'ve', 'were', 'weren\'t', 'what', 'what\'s', 'when', 'when\'s', 'where', 'where\'s', 'which', 'while', 'who', 'who\'s', 'whom', 'why', 'why\'s', 'with', 'won\'t', 'would', 'wouldn\'t', 'www', 'http', 'https',
-    'you', 'you\'d', 'you\'ll', 'you\'re', 'you\'ve', 'your', 'yours', 'yourself', 'yourselves'
+'www', 'http', 'https'
 ])
 
 
@@ -67,8 +55,7 @@ def init_autocomplete(documents):
 
 
 def clean_text(text):
-    # Convert to lowercase
-    text = text.lower()
+    text = clear_text(text)
     
     # Remove links
     text = re.sub(r'https?://\S+|www\.\S+', '', text)
@@ -95,6 +82,7 @@ def clean_text(text):
     
     return ' '.join(cleaned_words)
 
+
 def consolidate_phrases(phrases):
     if not phrases:
         return []  # Return an empty list if there are no phrases
@@ -117,30 +105,38 @@ def add_or_update_items(items, is_doc_name=False):
     cursor = conn.cursor()
     
     for item, tfidf_score in items:
-        cursor.execute('''
-            INSERT INTO autocomplete_items (phrase, tfidf_score, is_doc_name)
-            VALUES (?, ?, ?)
-            ON CONFLICT(phrase) DO UPDATE SET 
-                tfidf_score = MAX(tfidf_score, ?),
-                is_doc_name = ?
-        ''', (item, tfidf_score, is_doc_name, tfidf_score, is_doc_name))
+        if is_doc_name:
+            threshold = MIN_TFIDF_THRESHOLD_DOC_NAME
+        elif ' ' in item:  # It's a phrase
+            threshold = MIN_TFIDF_THRESHOLD_PHRASE
+        else:  # It's a single word
+            threshold = MIN_TFIDF_THRESHOLD_WORD
+
+        if tfidf_score >= threshold or is_doc_name:
+            cursor.execute('''
+                INSERT INTO autocomplete_items (phrase, tfidf_score, is_doc_name)
+                VALUES (?, ?, ?)
+                ON CONFLICT(phrase) DO UPDATE SET 
+                    tfidf_score = MAX(tfidf_score, ?),
+                    is_doc_name = ?
+            ''', (item, tfidf_score, is_doc_name, tfidf_score, is_doc_name))
     
     conn.commit()
     conn.close()
-
 
 def populate_autocomplete_from_documents(documents):
     phrases = []
     doc_names = []
     
-    vectorizer = TfidfVectorizer(stop_words=list(STOP_WORDS), token_pattern=r'\b\w+\b')
-    corpus = [clean_text(doc['content']) for doc in documents]
+    # Clean the documents once
+    cleaned_documents = [clean_text(doc['content']) for doc in documents]
     
-    tfidf_matrix = vectorizer.fit_transform(corpus)
+    # Use the cleaned documents for TF-IDF
+    vectorizer = TfidfVectorizer(stop_words=list(STOP_WORDS), token_pattern=r'\b\w+\b', lowercase=True)
+    tfidf_matrix = vectorizer.fit_transform(cleaned_documents)
     feature_names = vectorizer.get_feature_names_out()
 
-    for doc_index, doc in enumerate(documents):
-        cleaned_content = clean_text(doc['content'])
+    for doc_index, (doc, cleaned_content) in enumerate(zip(documents, cleaned_documents)):
         words = cleaned_content.split()
         
         for i in range(len(words)):
@@ -153,6 +149,9 @@ def populate_autocomplete_from_documents(documents):
                     phrases.append((phrase, tfidf_score))
 
         doc_name = doc['name']
+        if doc_name:
+            doc_names.append((doc_name, 1.0))  
+        doc_name = clean_text(doc['name'])
         if doc_name:
             doc_names.append((doc_name, 1.0))  
 

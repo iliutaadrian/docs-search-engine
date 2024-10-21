@@ -88,7 +88,7 @@ def apply_popularity_ranking(results):
 if __name__ == '__main__':
 
     print("\nInitializing documents", flush=True)
-    documents = init_processor()
+    indexed_count, documents = init_processor()
 
     print("\nInitializing search module", flush=True)
     init_search_module(documents)
@@ -96,8 +96,9 @@ if __name__ == '__main__':
     # print("\nInitializing cache module", flush=True)
     # init_cache_module()
 
-    print("\nInitializing autocomplete module", flush=True)
-    init_autocomplete(documents)
+    if indexed_count > 0:
+        print("\nInitializing autocomplete module", flush=True)
+        init_autocomplete(documents)
 
     # print("\nInitializing LLM module", flush=True)
     # init_llm()
