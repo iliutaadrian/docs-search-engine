@@ -170,12 +170,12 @@
   <script>
     document.addEventListener('alpine:init', () => {
       Alpine.data('searchApp', () => ({
-        query: 'redis',
+        query: '',
         searchedQuery: '',
         selectedMethods: {
-          aggregationMethods: 'single',
-          syntacticMethods: ['tfidf'],
-          semanticMethods: [],
+          aggregationMethods: 'rank_fusion',
+          syntacticMethods: ['fulltext', 'bm25'],
+          semanticMethods: ['openai'],
           additionalOptions: ["autocomplete"]
         },
         autocompleteEnabled: true,

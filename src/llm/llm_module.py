@@ -11,7 +11,7 @@ def init_llm():
     llm = ChatOpenAI(
         model_name="gpt-3.5-turbo", 
         temperature=0.2,
-        max_tokens=500
+        max_tokens=1000
     )
 
 # AI response generation function
@@ -20,12 +20,12 @@ def generate_ai_response(query, search_results):
         init_llm()
     
     # Join the relevant content from top search results (up to 3)
-    context = "\n".join([f"- {result['full_content']}" for result in search_results[:3]])
+    context = "\n".join([f"- {result['content']}" for result in search_results[:3]])
     
     # Define the prompt template
     prompt_template = ChatPromptTemplate.from_template("""
     You are an AI assistant tasked with answering questions based on the provided context.
-    Use the following pieces of context to answer the user's query. If you cannot find
+    Use the following pieces of context to answer the user's query. Make of summary of all the context. If you cannot find
     the answer in the context, say "I don't have enough information to answer that question."
     
     Context:

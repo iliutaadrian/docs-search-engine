@@ -49,7 +49,6 @@ def search(query, k=5):
         raise ValueError("OpenAI embeddings vector store not initialized. Call init() first.")
     
     semantic_results = vector_store.similarity_search_with_score(query, k=k*2)
-    print(semantic_results)
     
     unique_results = {}
     for doc, score in semantic_results:

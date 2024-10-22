@@ -50,7 +50,7 @@ Docu-Seek is a document search platform designed for efficient use for personal 
 
 ### Semantic Search Methods
 - **OpenAI Embeddings**: Uses AI to understand context and meaning in searches.
-- **BERT Embeddings**: Captures context-dependent meanings in text.
+- **baai Embeddings**: Captures context-dependent meanings in text.
 - **Sentence Transformers**: Compares semantic similarity between sentences.
 
 ### Hybrid and Advanced Methods
@@ -82,7 +82,7 @@ Docu-Seek is a document search platform designed for efficient use for personal 
     │   ├── document_processor.py
     │   ├── llm.py
     │   ├── search
-    │   │   ├── bert_search.py
+    │   │   ├── baai_search.py
     │   │   ├── fulltext_search.py
     │   │   ├── openai_search.py
     │   │   ├── sentence_transformers_search.py
@@ -139,7 +139,7 @@ Docu-Seek is a document search platform designed for efficient use for personal 
 | --- | --- |
 | [sentence_transformers_search.py](https://github.com/iliutaadrian/docu-seek/blob/main/src/search/sentence_transformers_search.py) | Initialize, create, and search with Sentence Transformer for fast similarity lookups on documents using a FAISS index. Process results for top document matches, highlighting query terms. Dynamically generate embeddings for each document, optimizing search efficiency in the parent repositorys architecture. |
 | [fulltext_search.py](https://github.com/iliutaadrian/docu-seek/blob/main/src/search/fulltext_search.py) | Enables full-text search functionalities integrating SQLite with FTS5 extension. Parses and processes user queries for optimal search results, returning relevant document snippets with highlighted matches. Sorting results by occurrence count enhances search precision within the repositorys architecture. |
-| [bert_search.py](https://github.com/iliutaadrian/docu-seek/blob/main/src/search/bert_search.py) | Indexes documents, calculates similarities, and highlights search query terms using BERT embeddings. Implements search function for top results based on similarity score. |
+| [baai_search.py](https://github.com/iliutaadrian/docu-seek/blob/main/src/search/baai_search.py) | Indexes documents, calculates similarities, and highlights search query terms using baai embeddings. Implements search function for top results based on similarity score. |
 | [tfidf_search.py](https://github.com/iliutaadrian/docu-seek/blob/main/src/search/tfidf_search.py) | Initializes and loads a TF-IDF FAISS search index to enable document search based on queries. Searches for relevant documents, highlighting query terms in results. Supports customization such as result snippet length and occurrence count. |
 | [openai_search.py](https://github.com/iliutaadrian/docu-seek/blob/main/src/search/openai_search.py) | Initializes and searches an OpenAI embeddings vector store. Processes documents, splits them for embeddings, and performs similarity search with score, returning processed results for text highlighting. |
 

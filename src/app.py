@@ -92,8 +92,8 @@ if __name__ == '__main__':
     print("\nInitializing search module", flush=True)
     init_search_module(documents)
 
-    # print("\nInitializing cache module", flush=True)
-    # init_cache_module()
+    print("\nInitializing cache module", flush=True)
+    init_cache_module()
 
     print("\nInitializing autocomplete module", flush=True)
     init_autocomplete(documents)
