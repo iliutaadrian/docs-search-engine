@@ -2,8 +2,9 @@ from search.fulltext_search import init as init_fulltext, search as search_fullt
 from search.tfidf_search import init as init_tfidf, search as search_tfidf
 from search.bm25_search import init as init_bm25, search as search_bm25
 from search.openai_search import init as init_openai, search as search_openai
-from search.bert_search import init as init_bert, search as search_bert
-from search.sentence_transformers_search import init as init_sentence_transformers, search as search_sentence_transformers
+from .st_1_search import init as init_st_1, search as search_st_1
+from .st_2_search import init as init_st_2, search as search_st_2
+from .st_3_search import init as init_st_3, search as search_st_3
 from search.hybrid_search import search as hybrid_search
 
 def perform_search(query, aggregation_method, syntactic_methods, semantic_methods):
@@ -24,8 +25,9 @@ def get_search_function(method):
         'tfidf': search_tfidf,
         'bm25': search_bm25,
         'openai': search_openai,
-        'bert': search_bert,
-        'sentence_transformers': search_sentence_transformers
+        'st_1': search_st_1,
+        'st_2': search_st_2,
+        'st_3': search_st_3
     }
     return search_functions.get(method.lower(), search_fulltext)
 

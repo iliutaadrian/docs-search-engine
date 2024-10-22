@@ -61,7 +61,6 @@ def search():
 
 @app.route('/autocomplete', methods=['GET'])
 def autocomplete():
-    print(request.args)
     query = request.args.get('q', '')
     if not query:
         return jsonify([])
@@ -96,11 +95,10 @@ if __name__ == '__main__':
     # print("\nInitializing cache module", flush=True)
     # init_cache_module()
 
-    if indexed_count > 0:
-        print("\nInitializing autocomplete module", flush=True)
-        init_autocomplete(documents)
+    print("\nInitializing autocomplete module", flush=True)
+    init_autocomplete(documents)
 
-    # print("\nInitializing LLM module", flush=True)
-    # init_llm()
+    print("\nInitializing LLM module", flush=True)
+    init_llm()
 
     app.run(debug=True, host='0.0.0.0')

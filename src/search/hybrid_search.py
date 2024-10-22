@@ -2,25 +2,28 @@ from search.fulltext_search import init as init_fulltext, search as search_fullt
 from search.tfidf_search import init as init_tfidf, search as search_tfidf
 from search.bm25_search import init as init_bm25, search as search_bm25
 from search.openai_search import init as init_openai, search as search_openai
-from search.bert_search import init as init_bert, search as search_bert
-from search.sentence_transformers_search import init as init_sentence_transformers, search as search_sentence_transformers
+from .st_1_search import init as init_st_1, search as search_st_1
+from .st_2_search import init as init_st_2, search as search_st_2
+from .st_3_search import init as init_st_3, search as search_st_3
 from collections import defaultdict
 
-def search(query, methods=['fulltext', 'openai', 'bert'], weights=None, combination_method='linear'):
+def search(query, methods=['fulltext', 'openai', 'baai'], weights=None, combination_method='linear'):
     all_results = {}
     for method in methods:
         if method == 'fulltext':
             all_results[method] = search_fulltext(query)
         elif method == 'openai':
             all_results[method] = search_openai(query)
-        elif method == 'bert':
-            all_results[method] = search_bert(query)
         elif method == 'tfidf':
             all_results[method] = search_tfidf(query)
         elif method == 'bm25':
             all_results[method] = search_bm25(query)
-        elif method == 'sentence_transformers':
-            all_results[method] = search_sentence_transformers(query)
+        elif method == 'st_1':
+            all_results[method] = search_st_1(query)
+        elif method == 'st_2':
+            all_results[method] = search_st_2(query)
+        elif method == 'st_3':
+            all_results[method] = search_st_3(query)
 
     if combination_method == 'rank_fusion':
         return rank_fusion(all_results)
@@ -44,7 +47,7 @@ def linear_combination(results, weights=None):
             doc_id = result['path']
             all_docs[doc_id] = result
             
-            score = (len(method_results) - rank) * result['occurrence_count']
+            score = (len(method_results) - rank) * result['relevance_score']
             combined_scores[doc_id] += score * weights[method]
     
     
@@ -59,7 +62,7 @@ def linear_combination(results, weights=None):
     final_results = []
     for doc_id, combined_score in sorted_results:
         result = all_docs[doc_id].copy()
-        result['occurrence_count'] = int(combined_score * 100)  
+        result['relevance_score'] = int(combined_score * 100)  
         final_results.append(result)
     
     return final_results
@@ -86,7 +89,7 @@ def rank_fusion(results, k=60):
     final_results = []
     for doc_id, fused_score in sorted_results:
         result = all_docs[doc_id].copy()
-        result['occurrence_count'] = int(fused_score * 100)  
+        result['relevance_score'] = int(fused_score * 100)  
         final_results.append(result)
     
     return final_results
@@ -101,9 +104,7 @@ def cascade_search(results, methods, threshold=0.5):
             doc_id = result['path']
             all_docs[doc_id] = result
             
-            # Normalize the score based on occurrence_count
-            # Assuming occurrence_count is in the range 0-100
-            score = result['occurrence_count'] / 100.0
+            score = result['relevance_score'] / 100.0
             
             if score >= threshold:
                 if doc_id not in [r['path'] for r in final_results]:
@@ -116,7 +117,7 @@ def cascade_search(results, methods, threshold=0.5):
     if not final_results and method_results:
         final_results = method_results[:5]  # Return top 5 results
     
-    # Sort the final results by occurrence_count
-    final_results.sort(key=lambda x: x['occurrence_count'], reverse=True)
+    # Sort the final results by relevance_score
+    final_results.sort(key=lambda x: x['relevance_score'], reverse=True)
     
     return final_results

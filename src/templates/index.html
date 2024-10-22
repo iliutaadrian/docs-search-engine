@@ -138,10 +138,10 @@
             <template x-for="(result, index) in searchResults" :key="index">
               <div class="bg-gray-800 p-4 rounded-lg shadow mb-4">
                 <div class="mb-2">
-                  <h3 class="text-lg font-semibold text-gray-100"
-                    x-html="result.highlighted_name">
+                  <h3 class="text-lg font-semibold text-gray-100" x-html="result.highlighted_name">
                   </h3>
-                  <p class="text-sm text-blue-400 mt-1">Releance Score: <span x-text="result.relevance_score"></span></p>
+                  <p class="text-sm text-blue-400 mt-1">Releance Score: <span x-text="result.relevance_score"></span>
+                  </p>
                 </div>
                 <div class="border-t border-gray-700 pt-2">
                   <div class="overflow-auto max-h-40">
@@ -203,8 +203,24 @@
             inputType: 'checkbox',
             methods: [
               {value: 'openai', name: 'OpenAI Embeddings', description: 'Uses AI to understand context and meaning in searches.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Word_embedding'},
-              {value: 'bert', name: 'BERT Embeddings', description: 'Captures context-dependent meanings in text.', learnMoreUrl: 'https://en.wikipedia.org/wiki/BERT_(language_model)'},
-              {value: 'sentence_transformers', name: 'Sentence Transformers', description: 'Compares semantic similarity between sentences.', learnMoreUrl: 'https://en.wikipedia.org/wiki/Sentence_embedding'}
+              {
+                value: 'st_2',
+                name: 'MPNet Base v2',
+                description: 'High performance semantic search model, best for general purpose text similarity',
+                learnMoreUrl: 'https://huggingface.co/sentence-transformers/all-mpnet-base-v2'
+              },
+              {
+                value: 'st_1',
+                name: 'MiniLM L6 v2',
+                description: 'Lightweight and fast model, good balance of performance and speed',
+                learnMoreUrl: 'https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2'
+              },
+              {
+                value: 'st_3',
+                name: 'BGE Base',
+                description: 'General purpose embedding model optimized for Chinese and English',
+                learnMoreUrl: 'https://huggingface.co/BAAI/bge-base-en'
+              }
             ]
           },
           aggregationMethods: {
