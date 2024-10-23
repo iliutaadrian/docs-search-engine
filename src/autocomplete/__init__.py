@@ -33,7 +33,7 @@ def get_db_connection():
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
 
-def init_autocomplete(documents):
+def init_autocomplete(documents, indexed_count=0):
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -51,7 +51,8 @@ def init_autocomplete(documents):
     conn.commit()
     conn.close()
     
-    populate_autocomplete_from_documents(documents)
+    if indexed_count > 0:
+        populate_autocomplete_from_documents(documents)
 
 
 def clean_text(text):

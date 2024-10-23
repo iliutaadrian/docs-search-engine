@@ -74,6 +74,9 @@ def find_snippet(text, query, snippet_length=100):
 def highlight_terms(text, query):
     highlighted = text
     for term in query.split():
+        if len(term) < 2:
+            continue
+
         # Create a regular expression pattern for case-insensitive matching
         pattern = re.compile(re.escape(term), re.IGNORECASE)
         

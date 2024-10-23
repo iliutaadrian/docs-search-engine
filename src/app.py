@@ -96,7 +96,7 @@ if __name__ == '__main__':
     init_cache_module()
 
     print("\nInitializing autocomplete module", flush=True)
-    init_autocomplete(documents)
+    init_autocomplete(documents, indexed_count)
 
     print("\nInitializing LLM module", flush=True)
     init_llm()
