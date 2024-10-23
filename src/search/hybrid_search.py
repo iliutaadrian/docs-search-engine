@@ -7,12 +7,11 @@ from .st_2_search import init as init_st_2, search as search_st_2
 from .st_3_search import init as init_st_3, search as search_st_3
 from collections import defaultdict
 
-# Hardcoded weights for different methods
 METHOD_WEIGHTS = {
-    'fulltext': 0.5,    
+    'fulltext': 0.3,    
+    'bm25': 0.4,       
+    'openai': 0.6,      
     'tfidf': 0.15,      
-    'bm25': 0.3,       
-    'openai': 0.3,      
     'st_1': 0.2,        
     'st_2': 0.1,        
     'st_3': 0.1,        
@@ -27,12 +26,13 @@ def search(query, methods=[], weights=None, combination_method='linear'):
     for method in methods:
         if method == 'fulltext':
             all_results[method] = search_fulltext(query)
-        elif method == 'openai':
-            all_results[method] = search_openai(query)
         elif method == 'tfidf':
             all_results[method] = search_tfidf(query)
         elif method == 'bm25':
             all_results[method] = search_bm25(query)
+
+        elif method == 'openai':
+            all_results[method] = search_openai(query)
         elif method == 'st_1':
             all_results[method] = search_st_1(query)
         elif method == 'st_2':
@@ -101,6 +101,7 @@ def linear_combination(results):
     
     return final_results
 
+
 def rank_fusion(results):
     """
     Reciprocal Rank Fusion (RRF) with hardcoded k value.
@@ -147,6 +148,7 @@ def rank_fusion(results):
         final_results.append(result)
     
     return final_results
+
 
 def cascade_search(results, methods):
     all_docs = {}
